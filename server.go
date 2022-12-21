@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Temwalker/assessment/db"
+	"github.com/Temwalker/assessment/expense"
 	"github.com/labstack/echo/v4"
 )
 
@@ -18,7 +18,7 @@ func main() {
 	fmt.Println("start at port:", os.Getenv("PORT"))
 
 	e := echo.New()
-	_ = db.New(os.Getenv("DATABASE_URL"))
+	_ = expense.NewDB(os.Getenv("DATABASE_URL"))
 	go func() {
 		if err := e.Start(os.Getenv("PORT")); err != nil && err != http.ErrServerClosed {
 			e.Logger.Fatal("shutting down the server")
