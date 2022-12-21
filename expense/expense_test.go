@@ -6,6 +6,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockDB struct {
+	Storage
+	Expenses []Expense
+}
+
+func (m mockDB) InsertExpense(ex Expense) Expense {
+	m.Expenses = append(m.Expenses, ex)
+	ex.ID = len(m.Expenses)
+	return ex
+}
+
 func TestSingleCreate(t *testing.T) {
 	ex := Expense{
 		Title:  "strawberry smoothie",
@@ -21,7 +32,11 @@ func TestSingleCreate(t *testing.T) {
 		Tags:   []string{"food", "beverage"},
 	}
 
-	got := CreateExpense(ex)
+	m := mockDB{
+		Expenses: []Expense{},
+	}
+
+	got := CreateExpense(m, ex)
 
 	assert.EqualValues(t, want, got)
 }

@@ -8,7 +8,11 @@ type Expense struct {
 	Tags   []string `json:"tags"`
 }
 
-func CreateExpense(ex Expense) Expense {
-	ex.ID = 1
-	return ex
+type Storage interface {
+	CreateTable()
+	InsertExpense(ex Expense) Expense
+}
+
+func CreateExpense(s Storage, ex Expense) Expense {
+	return s.InsertExpense(ex)
 }
