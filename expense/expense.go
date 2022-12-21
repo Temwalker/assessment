@@ -7,3 +7,8 @@ type Expense struct {
 	Note   string   `json:"note"`
 	Tags   []string `json:"tags"`
 }
+
+func CreateExpense(ex Expense) Expense {
+	ex.ID = 1
+	return ex
+}
