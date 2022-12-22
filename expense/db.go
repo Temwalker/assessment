@@ -26,7 +26,10 @@ func initDB() *DB {
 	db = &DB{
 		Database: database,
 	}
-	db.CreateTable()
+	err = db.CreateTable()
+	if err != nil {
+		log.Fatal("Can't create table : ", err)
+	}
 	return db
 }
 
@@ -51,7 +54,7 @@ func (d *DB) DiscDB() {
 	d.Database.Close()
 }
 
-func (d *DB) CreateTable() {
+func (d *DB) CreateTable() error {
 	createTb := `
 	CREATE TABLE IF NOT EXISTS expenses (
 		id SERIAL PRIMARY KEY,
@@ -62,9 +65,7 @@ func (d *DB) CreateTable() {
 	);`
 
 	_, err := d.Database.Exec(createTb)
-	if err != nil {
-		log.Fatal("can't create table :", err)
-	}
+	return err
 }
 
 func (d *DB) InsertExpense(ex *Expense) error {

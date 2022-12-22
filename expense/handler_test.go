@@ -2,7 +2,6 @@ package expense
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -76,6 +75,30 @@ func TestCreateUserWithNoneJson(t *testing.T) {
 
 	if assert.NoError(t, err) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
-		log.Println(strings.TrimSpace(rec.Body.String()))
+	}
+}
+
+func TestCreateUserWithEmptyJson(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
+		WithArgs("", "", "", "")
+
+	mdb := &DB{db}
+
+	err = mdb.CreateExpenseHandler(c)
+
+	if assert.NoError(t, err) {
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	}
 }
