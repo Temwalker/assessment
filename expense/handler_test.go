@@ -2,6 +2,7 @@ package expense
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,6 +25,7 @@ func TestCreateUser(t *testing.T) {
 	ex, _ := json.Marshal(reqEx)
 	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(string(ex)))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -55,4 +57,25 @@ func TestCreateUser(t *testing.T) {
 		assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
 	}
 
+}
+
+func TestCreateUserWithNoneJson(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	mdb := &DB{db}
+
+	err = mdb.CreateExpenseHandler(c)
+
+	if assert.NoError(t, err) {
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		log.Println(strings.TrimSpace(rec.Body.String()))
+	}
 }

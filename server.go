@@ -11,12 +11,15 @@ import (
 
 	"github.com/Temwalker/assessment/expense"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
 	fmt.Println("start at port:", os.Getenv("PORT"))
 
 	e := echo.New()
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 	db := expense.GetDB()
 
 	e.POST("/expenses", db.CreateExpenseHandler)
