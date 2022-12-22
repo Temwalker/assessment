@@ -7,12 +7,3 @@ type Expense struct {
 	Note   string   `json:"note"`
 	Tags   []string `json:"tags"`
 }
-
-type Storage interface {
-	CreateTable()
-	InsertExpense(ex Expense) Expense
-}
-
-func CreateExpense(s Storage, ex Expense) Expense {
-	return s.InsertExpense(ex)
-}

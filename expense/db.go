@@ -2,30 +2,56 @@ package expense
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
+	"sync"
 
 	"github.com/lib/pq"
 )
 
+var lock = &sync.Mutex{}
+
 type DB struct {
-	URL string
+	Database *sql.DB
 }
 
-func NewDB(url string) *DB {
-	db := &DB{
-		URL: url,
+var db *DB
+
+func initDB() *DB {
+	database, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal("Connect to database error :", err)
+	}
+	db = &DB{
+		Database: database,
 	}
 	db.CreateTable()
 	return db
 }
 
-func (db DB) CreateTable() {
-	database, err := sql.Open("postgres", db.URL)
-	if err != nil {
-		log.Fatal("Connect to database error :", err)
+func GetDB() *DB {
+	if db == nil {
+		lock.Lock()
+		defer lock.Unlock()
+		if db == nil {
+			fmt.Println("Creating single instance now.")
+			db = initDB()
+		} else {
+			fmt.Println("Single instance already created.")
+		}
+	} else {
+		fmt.Println("Single instance already created.")
 	}
-	defer database.Close()
 
+	return db
+}
+
+func (d *DB) DiscDB() {
+	d.Database.Close()
+}
+
+func (d *DB) CreateTable() {
 	createTb := `
 	CREATE TABLE IF NOT EXISTS expenses (
 		id SERIAL PRIMARY KEY,
@@ -35,23 +61,13 @@ func (db DB) CreateTable() {
 		tags TEXT[]
 	);`
 
-	_, err = database.Exec(createTb)
+	_, err := d.Database.Exec(createTb)
 	if err != nil {
 		log.Fatal("can't create table :", err)
 	}
 }
 
-func (db DB) InsertExpense(ex Expense) Expense {
-	database, err := sql.Open("postgres", db.URL)
-	if err != nil {
-		log.Fatal("Connect to database error :", err)
-	}
-	defer database.Close()
-
-	row := database.QueryRow("INSERT INTO users (title,amount,note,tags) values ($1,$2,$3,$4) RETURNING id", ex.Title, ex.Amount, ex.Note, pq.Array(&ex.Tags))
-	err = row.Scan(&ex.ID)
-	if err != nil {
-		log.Fatal("can't insert :", err)
-	}
-	return ex
+func (d *DB) InsertExpense(ex *Expense) error {
+	row := d.Database.QueryRow("INSERT INTO expenses (title,amount,note,tags) values ($1,$2,$3,$4) RETURNING id", ex.Title, ex.Amount, ex.Note, pq.Array(&ex.Tags))
+	return row.Scan(&ex.ID)
 }

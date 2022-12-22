@@ -14,11 +14,13 @@ import (
 )
 
 func main() {
-	//fmt.Println("Please use server.go for main file")
 	fmt.Println("start at port:", os.Getenv("PORT"))
 
 	e := echo.New()
-	_ = expense.NewDB(os.Getenv("DATABASE_URL"))
+	db := expense.GetDB()
+
+	e.POST("/expenses", db.CreateExpenseHandler)
+
 	go func() {
 		if err := e.Start(os.Getenv("PORT")); err != nil && err != http.ErrServerClosed {
 			e.Logger.Fatal("shutting down the server")
@@ -27,6 +29,7 @@ func main() {
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 	<-shutdown
+	db.DiscDB()
 	fmt.Println("shutting down...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
