@@ -2,6 +2,7 @@ package expense
 
 import (
 	"net/http"
+	"reflect"
 
 	"github.com/labstack/echo/v4"
 )
@@ -9,7 +10,8 @@ import (
 func (d *DB) CreateExpenseHandler(c echo.Context) error {
 	ex := Expense{}
 	err := c.Bind(&ex)
-	if err != nil {
+	emtpyEx := Expense{}
+	if err != nil || reflect.DeepEqual(ex, emtpyEx) {
 		return c.JSON(http.StatusBadRequest, Err{Msg: "Invalid request body"})
 	}
 	err = d.InsertExpense(&ex)

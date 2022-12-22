@@ -33,18 +33,29 @@ func initDB() *DB {
 	return db
 }
 
+func (d *DB) reConnectDB() {
+	err := d.Database.Ping()
+	if err != nil {
+		fmt.Println("Reconnecting to DB")
+		d.Database, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+		if err != nil {
+			log.Fatal("Connect to database error :", err)
+		}
+	}
+}
+
 func GetDB() *DB {
 	if db == nil {
 		lock.Lock()
 		defer lock.Unlock()
 		if db == nil {
-			fmt.Println("Creating single instance now.")
+			fmt.Println("Creating DB conenction")
 			db = initDB()
 		} else {
-			fmt.Println("Single instance already created.")
+			db.reConnectDB()
 		}
 	} else {
-		fmt.Println("Single instance already created.")
+		db.reConnectDB()
 	}
 
 	return db
