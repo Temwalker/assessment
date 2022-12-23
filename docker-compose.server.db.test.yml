@@ -1,0 +1,46 @@
+version: '3.8'
+
+networks:
+  integration-test-assessment:
+
+services:
+  it_tests:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.server.db.test
+    environment:
+      - ASSESSMENT_SERVER=server:2565
+      - DATABASE_URL=postgres://root:root@db/assessment-test-db?sslmode=disable
+    depends_on:
+      - db
+      - server
+    networks: 
+      - integration-test-assessment
+  server:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.server.test
+    ports:
+      - 2565:2565
+    expose:
+      - 2565
+    environment:
+      - PORT=:2565
+      - DATABASE_URL=postgres://root:root@db/assessment-test-db?sslmode=disable
+    depends_on:
+      - db
+    networks: 
+      - integration-test-assessment
+  db:
+    image: postgres
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: assessment-test-db
+    restart: on-failure
+    networks:
+      - integration-test-assessment

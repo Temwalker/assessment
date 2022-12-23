@@ -1,0 +1,12 @@
+FROM golang:1.19-alpine
+
+WORKDIR /app
+
+COPY go.mod .
+
+RUN go mod download
+
+COPY . .
+
+# Run tests
+CMD CGO_ENABLED=0 go test --tags=integration,db,server -v ./...
