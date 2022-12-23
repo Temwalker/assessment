@@ -1,8 +1,9 @@
-//go:build integration
+//go:build integration && db
 
 package expense
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,16 +16,14 @@ import (
 
 func TestDBCreateUser(t *testing.T) {
 	e := echo.New()
-	reqEx := &Expense{
-		Title:  "strawberry smoothie",
-		Amount: 79,
-		Note:   "night market promotion discount 10 bath",
-		Tags:   []string{"food", "beverage"},
-	}
-	ex, _ := json.Marshal(reqEx)
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(string(ex)))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	body := bytes.NewBufferString(`{
+		"title": "strawberry smoothie",
+		"amount": 79,
+		"note": "night market promotion discount 10 bath", 
+		"tags": ["food", "beverage"]
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -44,8 +43,7 @@ func TestDBCreateUser(t *testing.T) {
 func TestDBCreateUserWithNoneJson(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -62,8 +60,7 @@ func TestDBCreateUserWithNoneJson(t *testing.T) {
 func TestDBCreateUserWithEmptyJson(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -79,16 +76,14 @@ func TestDBCreateUserWithEmptyJson(t *testing.T) {
 
 func TestDBCreateUserWithNoConnection(t *testing.T) {
 	e := echo.New()
-	reqEx := &Expense{
-		Title:  "strawberry smoothie",
-		Amount: 79,
-		Note:   "night market promotion discount 10 bath",
-		Tags:   []string{"food", "beverage"},
-	}
-	ex, _ := json.Marshal(reqEx)
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(string(ex)))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	body := bytes.NewBufferString(`{
+		"title": "strawberry smoothie",
+		"amount": 79,
+		"note": "night market promotion discount 10 bath", 
+		"tags": ["food", "beverage"]
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 

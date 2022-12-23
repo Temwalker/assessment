@@ -2,7 +2,6 @@ package expense
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -36,7 +35,6 @@ func initDB() *DB {
 func (d *DB) reConnectDB() {
 	err := d.Database.Ping()
 	if err != nil {
-		fmt.Println("Reconnecting to DB")
 		d.Database, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 		if err != nil {
 			log.Fatal("Connect to database error :", err)
@@ -49,7 +47,6 @@ func GetDB() *DB {
 		lock.Lock()
 		defer lock.Unlock()
 		if db == nil {
-			fmt.Println("Creating DB conenction")
 			db = initDB()
 		} else {
 			db.reConnectDB()
