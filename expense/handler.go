@@ -27,7 +27,7 @@ func (d *DB) GetExpenseByIdHandler(c echo.Context) error {
 	id := c.Param("id")
 	intVar, err := strconv.Atoi(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, Err{Msg: "id is not numeric"})
+		return c.JSON(http.StatusBadRequest, Err{Msg: "ID is not numeric"})
 	}
 	ex := Expense{}
 	err = d.SelectExpenseById(intVar, &ex)

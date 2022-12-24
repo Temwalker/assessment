@@ -4,6 +4,7 @@ package expense
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -130,6 +131,8 @@ func TestGetExpenseByID(t *testing.T) {
 	})
 
 	t.Run("Get Expense By ID(STRING) Return HTTP Status Bad Request", func(t *testing.T) {
+		want := Err{"ID is not numeric"}
+		expected, _ := json.Marshal(want)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		c.SetPath("/:id")
@@ -142,6 +145,33 @@ func TestGetExpenseByID(t *testing.T) {
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
+	t.Run("Get Expense By ID but not found Return HTTP Status Bad Request", func(t *testing.T) {
+		want := Err{"User not found"}
+		expected, _ := json.Marshal(want)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("1")
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT id,title,amount,note,tags FROM expenses").
+			ExpectQuery().WithArgs(1).WillReturnError(sql.ErrNoRows)
+
+		mdb := DB{db}
+
+		err = mdb.GetExpenseByIdHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
 		}
 	})
 
