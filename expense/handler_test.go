@@ -1,4 +1,4 @@
-//go:build unit
+//go:build1 unit
 
 package expense
 
@@ -83,21 +83,16 @@ func TestCreateExpenseWithEmptyJson(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
+	mdb := &DB{}
 
-	mdb := &DB{db}
-
-	err = mdb.CreateExpenseHandler(c)
+	err := mdb.CreateExpenseHandler(c)
 
 	if assert.NoError(t, err) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	}
 }
 
-func TestGetExpenseById(t *testing.T) {
+func TestGetExpenseByID(t *testing.T) {
 	want := Expense{
 		ID:     1,
 		Title:  "strawberry smoothie",
@@ -132,4 +127,23 @@ func TestGetExpenseById(t *testing.T) {
 		assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
 	}
 
+}
+
+func TestGetExpenseByIDString(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("NumberOne")
+
+	mdb := &DB{}
+
+	err := mdb.GetExpenseByIdHandler(c)
+
+	if assert.NoError(t, err) {
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	}
 }
