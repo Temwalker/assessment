@@ -175,4 +175,29 @@ func TestGetExpenseByID(t *testing.T) {
 		}
 	})
 
+	t.Run("Get Expense By ID but DB close Return HTTP Internal Error", func(t *testing.T) {
+		want := Err{"Internal error"}
+		expected, _ := json.Marshal(want)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("1")
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT id,title,amount,note,tags FROM expenses").WillReturnError(sql.ErrConnDone)
+
+		mdb := DB{db}
+
+		err = mdb.GetExpenseByIdHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
 }
