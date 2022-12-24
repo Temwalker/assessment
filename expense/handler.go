@@ -23,7 +23,7 @@ func (d *DB) CreateExpenseHandler(c echo.Context) error {
 	return c.JSON(http.StatusCreated, ex)
 }
 
-func (d *DB) getExpenseByIdHandler(c echo.Context) error {
+func (d *DB) GetExpenseByIdHandler(c echo.Context) error {
 	id := c.Param("id")
 	intVar, err := strconv.Atoi(id)
 	if err != nil {
