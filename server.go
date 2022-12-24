@@ -37,6 +37,7 @@ func main() {
 	db := expense.GetDB()
 
 	e.POST("/expenses", db.CreateExpenseHandler)
+	e.GET("/expenses/:id", db.GetExpenseByIdHandler)
 
 	go func() {
 		if err := e.Start(os.Getenv("PORT")); err != nil && err != http.ErrServerClosed {
