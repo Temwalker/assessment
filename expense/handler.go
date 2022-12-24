@@ -31,11 +31,12 @@ func (d *DB) GetExpenseByIdHandler(c echo.Context) error {
 	}
 	ex := Expense{}
 	err = d.SelectExpenseById(intVar, &ex)
+	if err == nil {
+		return c.JSON(http.StatusOK, ex)
+	}
 	if err.Error() == sql.ErrNoRows.Error() {
 		return c.JSON(http.StatusBadRequest, Err{Msg: "User not found"})
 	}
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
-	}
-	return c.JSON(http.StatusOK, ex)
+	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
+
 }

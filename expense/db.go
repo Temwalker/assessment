@@ -89,7 +89,7 @@ func (d *DB) SelectExpenseById(rowId int, ex *Expense) error {
 	}
 	defer stmt.Close()
 	row := stmt.QueryRow(rowId)
-	err = row.Scan(&ex.ID, &ex.Title, &ex.Amount, &ex.Note, &ex.Tags)
+	err = row.Scan(&ex.ID, &ex.Title, &ex.Amount, &ex.Note, pq.Array(&ex.Tags))
 	if err != nil {
 		log.Println("can't Scan row into variables", err)
 	}
