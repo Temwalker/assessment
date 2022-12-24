@@ -132,14 +132,14 @@ func TestDBGetExpenseByID(t *testing.T) {
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	tests := []struct {
 		testname     string
-		want         interface{}
-		httpStatus   int
 		id           string
 		wantClosedDB bool
+		httpStatus   int
+		want         interface{}
 	}{
-		{"Get Expense By ID Return HTTP OK and Query Expense", seed, http.StatusOK, strconv.Itoa(seed.ID), false},
-		{"Get Expense By ID but not found Return HTTP Status Bad Request", Err{"User not found"}, http.StatusBadRequest, "0", false},
-		{"Get Expense By ID but DB close Return HTTP Internal Error", Err{"Internal error"}, http.StatusInternalServerError, "1", true},
+		{"Get Expense By ID Return HTTP OK and Query Expense", strconv.Itoa(seed.ID), false, http.StatusOK, seed},
+		{"Get Expense By ID but not found Return HTTP Status Bad Request", "0", false, http.StatusBadRequest, Err{"User not found"}},
+		{"Get Expense By ID but DB close Return HTTP Internal Error", "1", true, http.StatusInternalServerError, Err{"Internal error"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.testname, func(t *testing.T) {
