@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDBCreateUser(t *testing.T) {
+func TestDBCreateExpense(t *testing.T) {
 	e := echo.New()
 	body := bytes.NewBufferString(`{
 		"title": "strawberry smoothie",
@@ -40,7 +40,7 @@ func TestDBCreateUser(t *testing.T) {
 
 }
 
-func TestDBCreateUserWithNoneJson(t *testing.T) {
+func TestDBCreateExpenseWithNoneJson(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -57,7 +57,7 @@ func TestDBCreateUserWithNoneJson(t *testing.T) {
 	}
 }
 
-func TestDBCreateUserWithEmptyJson(t *testing.T) {
+func TestDBCreateExpenseWithEmptyJson(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -74,7 +74,7 @@ func TestDBCreateUserWithEmptyJson(t *testing.T) {
 	}
 }
 
-func TestDBCreateUserWithNoConnection(t *testing.T) {
+func TestDBCreateExpenseWithNoConnection(t *testing.T) {
 	e := echo.New()
 	body := bytes.NewBufferString(`{
 		"title": "strawberry smoothie",

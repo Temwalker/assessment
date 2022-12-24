@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateUser(t *testing.T) {
+func TestCreateExpense(t *testing.T) {
 	e := echo.New()
 	reqEx := &Expense{
 		Title:  "strawberry smoothie",
@@ -25,8 +25,7 @@ func TestCreateUser(t *testing.T) {
 	}
 	ex, _ := json.Marshal(reqEx)
 	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(string(ex)))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -60,11 +59,10 @@ func TestCreateUser(t *testing.T) {
 
 }
 
-func TestCreateUserWithNoneJson(t *testing.T) {
+func TestCreateExpenseWithNoneJson(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	db, _, err := sqlmock.New()
@@ -80,11 +78,10 @@ func TestCreateUserWithNoneJson(t *testing.T) {
 	}
 }
 
-func TestCreateUserWithEmptyJson(t *testing.T) {
+func TestCreateExpenseWithEmptyJson(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "November 10, 2009")
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 

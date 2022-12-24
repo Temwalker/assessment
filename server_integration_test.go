@@ -46,7 +46,7 @@ func (r *Response) Decode(v interface{}) error {
 	return json.NewDecoder((r.Body)).Decode(v)
 }
 
-func TestServerCreateUser(t *testing.T) {
+func TestServerCreateExpense(t *testing.T) {
 	body := bytes.NewBufferString(`{
 		"title": "strawberry smoothie",
 		"amount": 79,
@@ -63,7 +63,7 @@ func TestServerCreateUser(t *testing.T) {
 	}
 }
 
-func TestServerCreateUserWithNoneJson(t *testing.T) {
+func TestServerCreateExpenseWithNoneJson(t *testing.T) {
 	body := bytes.NewBufferString("1234")
 	res := request(http.MethodPost, uri("expenses"), body)
 	got := expense.Expense{}
