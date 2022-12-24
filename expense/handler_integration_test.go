@@ -123,66 +123,45 @@ func seedExpense() (Expense, error) {
 }
 
 func TestDBGetExpenseByID(t *testing.T) {
+	seed, err := seedExpense()
+	if err != nil {
+		t.Fatal("can't seed expense : ", err)
+	}
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	t.Run("Get Expense By ID Return HTTP OK and Query Expense", func(t *testing.T) {
-		want, err := seedExpense()
-		if err != nil {
-			t.Fatal("can't seed expense : ", err)
-		}
-		expected, _ := json.Marshal(want)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/:id")
-		c.SetParamNames("id")
-		c.SetParamValues(strconv.Itoa(want.ID))
+	tests := []struct {
+		testname     string
+		want         interface{}
+		httpStatus   int
+		id           string
+		wantClosedDB bool
+	}{
+		{"Get Expense By ID Return HTTP OK and Query Expense", seed, http.StatusOK, strconv.Itoa(seed.ID), false},
+		{"Get Expense By ID but not found Return HTTP Status Bad Request", Err{"User not found"}, http.StatusBadRequest, "0", false},
+		{"Get Expense By ID but DB close Return HTTP Internal Error", Err{"Internal error"}, http.StatusInternalServerError, "1", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.testname, func(t *testing.T) {
+			expected, _ := json.Marshal(tt.want)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/:id")
+			c.SetParamNames("id")
+			c.SetParamValues(tt.id)
 
-		db := GetDB()
-		defer db.DiscDB()
+			db := GetDB()
+			if tt.wantClosedDB {
+				db.DiscDB()
+			} else {
+				defer db.DiscDB()
+			}
 
-		err = db.GetExpenseByIdHandler(c)
-		if assert.NoError(t, err) {
-			assert.Equal(t, http.StatusOK, rec.Code)
-			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
-		}
-	})
-
-	t.Run("Get Expense By ID but not found Return HTTP Status Bad Request", func(t *testing.T) {
-		want := Err{"User not found"}
-		expected, _ := json.Marshal(want)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/:id")
-		c.SetParamNames("id")
-		c.SetParamValues("0")
-
-		db := GetDB()
-		defer db.DiscDB()
-
-		err := db.GetExpenseByIdHandler(c)
-		if assert.NoError(t, err) {
-			assert.Equal(t, http.StatusBadRequest, rec.Code)
-			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
-		}
-	})
-
-	t.Run("Get Expense By ID but DB close Return HTTP Internal Error", func(t *testing.T) {
-		want := Err{"Internal error"}
-		expected, _ := json.Marshal(want)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetPath("/:id")
-		c.SetParamNames("id")
-		c.SetParamValues("1")
-		db := GetDB()
-		db.DiscDB()
-
-		err := db.GetExpenseByIdHandler(c)
-		if assert.NoError(t, err) {
-			assert.Equal(t, http.StatusInternalServerError, rec.Code)
-			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
-		}
-	})
-
+			err = db.GetExpenseByIdHandler(c)
+			if assert.NoError(t, err) {
+				assert.Equal(t, tt.httpStatus, rec.Code)
+				assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+			}
+		})
+	}
 }
