@@ -138,7 +138,7 @@ func TestDBGetExpenseByID(t *testing.T) {
 		want         interface{}
 	}{
 		{"Get Expense By ID Return HTTP OK and Query Expense", strconv.Itoa(seed.ID), false, http.StatusOK, seed},
-		{"Get Expense By ID but not found Return HTTP Status Bad Request", "0", false, http.StatusBadRequest, Err{"User not found"}},
+		{"Get Expense By ID but not found Return HTTP Status Bad Request", "0", false, http.StatusBadRequest, Err{"Expense not found"}},
 		{"Get Expense By ID but DB close Return HTTP Internal Error", "1", true, http.StatusInternalServerError, Err{"Internal error"}},
 	}
 	for _, tt := range tests {

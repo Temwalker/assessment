@@ -30,13 +30,35 @@ func (d *DB) GetExpenseByIdHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Msg: "ID is not numeric"})
 	}
 	ex := Expense{}
-	err = d.SelectExpenseById(intVar, &ex)
+	err = d.SelectExpenseByID(intVar, &ex)
 	if err == nil {
 		return c.JSON(http.StatusOK, ex)
 	}
 	if err.Error() == sql.ErrNoRows.Error() {
-		return c.JSON(http.StatusBadRequest, Err{Msg: "User not found"})
+		return c.JSON(http.StatusBadRequest, Err{Msg: "Expense not found"})
 	}
 	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
 
+}
+
+func (d *DB) UpdateExpenseByIDHandler(c echo.Context) error {
+	id := c.Param("id")
+	intVar, err := strconv.Atoi(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Msg: "ID is not numeric"})
+	}
+	ex := Expense{}
+	err = c.Bind(&ex)
+	emtpyEx := Expense{}
+	if err != nil || reflect.DeepEqual(ex, emtpyEx) {
+		return c.JSON(http.StatusBadRequest, Err{Msg: "Invalid request body"})
+	}
+	err = d.UpdateExpenseByID(intVar, &ex)
+	if err == nil {
+		return c.JSON(http.StatusOK, ex)
+	}
+	if err.Error() == sql.ErrNoRows.Error() {
+		return c.JSON(http.StatusBadRequest, Err{Msg: "Expense not found"})
+	}
+	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
 }

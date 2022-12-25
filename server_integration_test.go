@@ -114,7 +114,7 @@ func TestServerGetExpenseByID(t *testing.T) {
 		want       interface{}
 	}{
 		{"Get Expense By ID Return HTTP OK and Query Expense", "November 10, 2009", strconv.Itoa(seed.ID), http.StatusOK, seed},
-		{"Get Expense By ID but not found Return HTTP Status Bad Request", "November 10, 2009", "0", http.StatusBadRequest, expense.Err{Msg: "User not found"}},
+		{"Get Expense By ID but not found Return HTTP Status Bad Request", "November 10, 2009", "0", http.StatusBadRequest, expense.Err{Msg: "Expense not found"}},
 		{"Get Expense By ID but Authorization failed Return HTTP Status Unauthorized", "HELLO", strconv.Itoa(seed.ID), http.StatusUnauthorized, ""},
 	}
 	for _, tt := range tests {

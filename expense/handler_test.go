@@ -150,7 +150,7 @@ func TestGetExpenseByID(t *testing.T) {
 	})
 
 	t.Run("Get Expense By ID but not found Return HTTP Status Bad Request", func(t *testing.T) {
-		want := Err{"User not found"}
+		want := Err{"Expense not found"}
 		expected, _ := json.Marshal(want)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
