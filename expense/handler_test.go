@@ -213,7 +213,6 @@ func TestUpdateExpenseByID(t *testing.T) {
 			Tags:   []string{"beverage"},
 		}
 		expected, _ := json.Marshal(want)
-
 		body := bytes.NewBufferString(`{
 			"id": 1,
 			"title": "apple smoothie",
@@ -246,4 +245,32 @@ func TestUpdateExpenseByID(t *testing.T) {
 			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
 		}
 	})
+	t.Run("Update Expense By ID(STRING) Return HTTP Status Bad Request", func(t *testing.T) {
+		want := Err{"ID is not numeric"}
+		expected, _ := json.Marshal(want)
+		body := bytes.NewBufferString(`{
+			"id": 1,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPut, "/expenses", body)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("NumberOne")
+
+		mdb := &DB{}
+
+		err := mdb.GetExpenseByIdHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+
+	})
+
 }
