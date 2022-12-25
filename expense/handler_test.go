@@ -273,4 +273,31 @@ func TestUpdateExpenseByID(t *testing.T) {
 
 	})
 
+	t.Run("Update Expense By ID but JSON Req have no title Return HTTP Status Bad Request", func(t *testing.T) {
+		want := Err{Msg: "Invalid request body"}
+		expected, _ := json.Marshal(want)
+		body := bytes.NewBufferString(`{
+			"id": 1,
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPut, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("1")
+
+		mdb := DB{}
+
+		err := mdb.UpdateExpenseByIDHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
 }
