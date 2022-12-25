@@ -295,7 +295,7 @@ func TestUpdateExpenseByID(t *testing.T) {
 		err := mdb.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
 			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
 		}
 	})
