@@ -201,3 +201,49 @@ func TestGetExpenseByID(t *testing.T) {
 	})
 
 }
+
+func TestUpdateExpenseByID(t *testing.T) {
+	e := echo.New()
+	t.Run("Update Expense By ID Return HTTP OK and Expense", func(t *testing.T) {
+		want := Expense{
+			ID:     1,
+			Title:  "apple smoothie",
+			Amount: 89,
+			Note:   "no discount",
+			Tags:   []string{"beverage"},
+		}
+		expected, _ := json.Marshal(want)
+
+		body := bytes.NewBufferString(`{
+			"id": 1,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPut, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/:id")
+		c.SetParamNames("id")
+		c.SetParamValues(strconv.Itoa(want.ID))
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("UPDATE expenses").
+			ExpectQuery().WithArgs(want.ID, want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(want.ID))
+
+		mdb := DB{db}
+
+		err = mdb.UpdateExpenseByIDHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+}
