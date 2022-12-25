@@ -300,4 +300,40 @@ func TestUpdateExpenseByID(t *testing.T) {
 		}
 	})
 
+	t.Run("Update Expense By ID but ID not found Return HTTP Status Bad Request", func(t *testing.T) {
+		want := Err{Msg: "Expense not found"}
+		expected, _ := json.Marshal(want)
+		body := bytes.NewBufferString(`{
+			"id": 1,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPut, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/:id")
+		c.SetParamNames("id")
+		c.SetParamValues("1")
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("UPDATE expenses").
+			ExpectQuery().WithArgs(1, "apple smoothie", 89.00, "no discount", pq.Array(&[]string{"beverage"})).
+			WillReturnError(sql.ErrNoRows)
+
+		mdb := DB{db}
+
+		err = mdb.UpdateExpenseByIDHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
 }
