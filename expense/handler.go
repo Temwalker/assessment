@@ -1,7 +1,6 @@
 package expense
 
 import (
-	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -11,7 +10,7 @@ import (
 func (d *DB) CreateExpenseHandler(c echo.Context) error {
 	ex := Expense{}
 	err := c.Bind(&ex)
-	if err != nil || checkEmptyField(ex) {
+	if err != nil || ex.checkEmptyField() {
 		return c.JSON(http.StatusBadRequest, Err{Msg: "Invalid request body"})
 	}
 	err = d.InsertExpense(&ex)
@@ -28,14 +27,7 @@ func (d *DB) GetExpenseByIdHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Msg: "ID is not numeric"})
 	}
 	ex := Expense{}
-	err = d.SelectExpenseByID(intVar, &ex)
-	if err == nil {
-		return c.JSON(http.StatusOK, ex)
-	}
-	if err.Error() == sql.ErrNoRows.Error() {
-		return c.JSON(http.StatusBadRequest, Err{Msg: "Expense not found"})
-	}
-	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
+	return ex.returnByIDHandler(c, d.SelectExpenseByID(intVar, &ex))
 
 }
 
@@ -47,17 +39,10 @@ func (d *DB) UpdateExpenseByIDHandler(c echo.Context) error {
 	}
 	ex := Expense{}
 	err = c.Bind(&ex)
-	if err != nil || checkEmptyField(ex) {
+	if err != nil || ex.checkEmptyField() {
 		return c.JSON(http.StatusBadRequest, Err{Msg: "Invalid request body"})
 	}
-	err = d.UpdateExpenseByID(intVar, &ex)
-	if err == nil {
-		return c.JSON(http.StatusOK, ex)
-	}
-	if err.Error() == sql.ErrNoRows.Error() {
-		return c.JSON(http.StatusBadRequest, Err{Msg: "Expense not found"})
-	}
-	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
+	return ex.returnByIDHandler(c, d.UpdateExpenseByID(intVar, &ex))
 }
 
 func (d *DB) GetAllExpensesHandler(c echo.Context) error {
