@@ -122,7 +122,6 @@ func (d *DB) SelectAllExpenses(expenses *[]Expense) error {
 		var ex Expense
 		err := rows.Scan(&ex.ID, &ex.Title, &ex.Amount, &ex.Note, pq.Array(&ex.Tags))
 		if err != nil {
-			log.Fatal("can't Scan row into variable", err)
 			return err
 		}
 		*expenses = append(*expenses, ex)

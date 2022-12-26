@@ -77,11 +77,8 @@ func (d *DB) UpdateExpenseByIDHandler(c echo.Context) error {
 func (d *DB) GetAllExpensesHandler(c echo.Context) error {
 	expenses := []Expense{}
 	err := d.SelectAllExpenses(&expenses)
-	if err == nil {
-		return c.JSON(http.StatusOK, expenses)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
 	}
-	if err.Error() == sql.ErrNoRows.Error() {
-		return c.JSON(http.StatusBadRequest, Err{Msg: "Expense not found"})
-	}
-	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
+	return c.JSON(http.StatusOK, expenses)
 }
