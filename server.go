@@ -39,7 +39,7 @@ func main() {
 	e.POST("/expenses", db.CreateExpenseHandler)
 	e.GET("/expenses/:id", db.GetExpenseByIdHandler)
 	e.PUT("/expenses/:id", db.UpdateExpenseByIDHandler)
-
+	e.GET("/expenses", db.GetAllExpensesHandler)
 	go func() {
 		if err := e.Start(os.Getenv("PORT")); err != nil && err != http.ErrServerClosed {
 			e.Logger.Fatal("shutting down the server")

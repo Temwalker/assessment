@@ -106,7 +106,7 @@ func (d *DB) UpdateExpenseByID(rowId int, ex *Expense) error {
 	return row.Scan(&ex.ID)
 }
 
-func (d *DB) SelectAllExpenses(expenses []Expense) error {
+func (d *DB) SelectAllExpenses(expenses *[]Expense) error {
 	sqlStatement := `SELECT * FROM expenses`
 	stmt, err := d.Database.Prepare(sqlStatement)
 	if err != nil {
@@ -124,7 +124,7 @@ func (d *DB) SelectAllExpenses(expenses []Expense) error {
 			log.Fatal("can't Scan row into variable", err)
 			return err
 		}
-		expenses = append(expenses, ex)
+		*expenses = append(*expenses, ex)
 	}
 
 	return nil
