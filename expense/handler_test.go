@@ -1,5 +1,3 @@
-//go:build unit
-
 package expense
 
 import (
@@ -19,78 +17,80 @@ import (
 )
 
 func TestCreateExpense(t *testing.T) {
-	want := Expense{
-		ID:     1,
-		Title:  "strawberry smoothie",
-		Amount: 79,
-		Note:   "night market promotion discount 10 bath",
-		Tags:   []string{"food", "beverage"},
-	}
-	expected, _ := json.Marshal(want)
-	e := echo.New()
-	body := bytes.NewBufferString(`{
-		"title": "strawberry smoothie",
-		"amount": 79,
-		"note": "night market promotion discount 10 bath", 
-		"tags": ["food", "beverage"]
-	}`)
-	req := httptest.NewRequest(http.MethodPost, "/expenses", body)
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	t.Run("Create Expense Return HTTP StatusCreated and Created Expense", func(t *testing.T) {
+		want := Expense{
+			ID:     1,
+			Title:  "strawberry smoothie",
+			Amount: 79,
+			Note:   "night market promotion discount 10 bath",
+			Tags:   []string{"food", "beverage"},
+		}
+		expected, _ := json.Marshal(want)
+		e := echo.New()
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
 
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
-		WithArgs(want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mdb := DB{db}
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
+			WithArgs(want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+		mdb := DB{db}
 
-	err = mdb.CreateExpenseHandler(c)
+		err = mdb.CreateExpenseHandler(c)
 
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusCreated, rec.Code)
-		assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
-	}
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusCreated, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
 
-}
+	t.Run("Create Expense with none JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
 
-func TestCreateExpenseWithNoneJson(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+		db, _, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mdb := DB{db}
 
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	mdb := DB{db}
+		err = mdb.CreateExpenseHandler(c)
 
-	err = mdb.CreateExpenseHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
 
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	}
-}
+	t.Run("Create Expense with Empty JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
 
-func TestCreateExpenseWithEmptyJson(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+		mdb := DB{}
 
-	mdb := DB{}
+		err := mdb.CreateExpenseHandler(c)
 
-	err := mdb.CreateExpenseHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
 
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	}
 }
 
 func TestGetExpenseByID(t *testing.T) {
