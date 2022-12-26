@@ -91,6 +91,37 @@ func TestCreateExpense(t *testing.T) {
 		}
 	})
 
+	t.Run("Create Expense When DB Close Return HTTP Internal Error", func(t *testing.T) {
+		want := Err{Msg: "Internal error"}
+		expected, _ := json.Marshal(want)
+		e := echo.New()
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
+			WillReturnError(sql.ErrConnDone)
+		mdb := DB{db}
+
+		err = mdb.CreateExpenseHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
 }
 
 func TestGetExpenseByID(t *testing.T) {
