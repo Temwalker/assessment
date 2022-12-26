@@ -138,7 +138,7 @@ func TestDBGetExpenseByID(t *testing.T) {
 		want         interface{}
 	}{
 		{"Get Expense By ID Return HTTP OK and Query Expense", strconv.Itoa(seed.ID), false, http.StatusOK, seed},
-		{"Get Expense By ID but not found Return HTTP Status Bad Request", "0", false, http.StatusBadRequest, Err{"User not found"}},
+		{"Get Expense By ID but not found Return HTTP Status Bad Request", "0", false, http.StatusBadRequest, Err{"Expense not found"}},
 		{"Get Expense By ID but DB close Return HTTP Internal Error", "1", true, http.StatusInternalServerError, Err{"Internal error"}},
 	}
 	for _, tt := range tests {
@@ -158,6 +158,76 @@ func TestDBGetExpenseByID(t *testing.T) {
 			}
 
 			err = db.GetExpenseByIdHandler(c)
+			if assert.NoError(t, err) {
+				assert.Equal(t, tt.httpStatus, rec.Code)
+				assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+			}
+		})
+	}
+}
+
+func TestDBUpdateExpenseByID(t *testing.T) {
+	seed, err := seedExpense()
+	if err != nil {
+		t.Fatal("can't seed expense : ", err)
+	}
+	wantOK := Expense{
+		ID:     seed.ID,
+		Title:  "apple smoothie",
+		Amount: 89,
+		Note:   "no discount",
+		Tags:   []string{"beverage"},
+	}
+	e := echo.New()
+	tests := []struct {
+		testname     string
+		id           string
+		testdata     string
+		wantClosedDB bool
+		httpStatus   int
+		want         interface{}
+	}{
+		{"Update Expense By ID Return HTTP OK and Expense", strconv.Itoa(seed.ID),
+			`{
+			"id": ` + strconv.Itoa(seed.ID) + `,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]}`, false, http.StatusOK, wantOK},
+		{"Update Expense By ID but not found Return HTTP Status Bad Request", strconv.Itoa(0),
+			`{
+			"id": ` + strconv.Itoa(0) + `,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]}`, false, http.StatusBadRequest, Err{"Expense not found"}},
+		{"Update Expense By ID but DB close Return HTTP Internal Error", strconv.Itoa(seed.ID),
+			`{
+			"id": ` + strconv.Itoa(seed.ID) + `,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]}`, true, http.StatusInternalServerError, Err{"Internal error"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.testname, func(t *testing.T) {
+			expected, _ := json.Marshal(tt.want)
+			req := httptest.NewRequest(http.MethodPut, "/expenses", bytes.NewBufferString(tt.testdata))
+			req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/:id")
+			c.SetParamNames("id")
+			c.SetParamValues(tt.id)
+
+			db := GetDB()
+			if tt.wantClosedDB {
+				db.DiscDB()
+			} else {
+				defer db.DiscDB()
+			}
+
+			err = db.UpdateExpenseByIDHandler(c)
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.httpStatus, rec.Code)
 				assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))

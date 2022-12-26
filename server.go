@@ -38,6 +38,7 @@ func main() {
 
 	e.POST("/expenses", db.CreateExpenseHandler)
 	e.GET("/expenses/:id", db.GetExpenseByIdHandler)
+	e.PUT("/expenses/:id", db.UpdateExpenseByIDHandler)
 
 	go func() {
 		if err := e.Start(os.Getenv("PORT")); err != nil && err != http.ErrServerClosed {
