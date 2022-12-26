@@ -110,11 +110,12 @@ func (d *DB) SelectAllExpenses(expenses *[]Expense) error {
 	sqlStatement := "SELECT * FROM expenses;"
 	stmt, err := d.Database.Prepare(sqlStatement)
 	if err != nil {
+		log.Println("can't prepare ", err)
 		return err
 	}
 	rows, err := stmt.Query()
 	if err != nil {
-		log.Fatal("can't query all expenses", err)
+		log.Println("can't query all expenses", err)
 		return err
 	}
 	for rows.Next() {
