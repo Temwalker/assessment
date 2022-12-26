@@ -10,22 +10,10 @@ import (
 	"time"
 
 	"github.com/Temwalker/assessment/expense"
+	customMiddleware "github.com/Temwalker/assessment/middleware"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
-
-func AuthVerify(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		if c.Request().Header.Get(echo.HeaderAuthorization) != "November 10, 2009" {
-			return c.JSON(http.StatusUnauthorized, "")
-		}
-
-		if err := next(c); err != nil {
-			c.Error(err)
-		}
-		return nil
-	}
-}
 
 func main() {
 	fmt.Println("start at port:", os.Getenv("PORT"))
@@ -33,7 +21,7 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(AuthVerify)
+	e.Use(customMiddleware.Authorizer)
 	db := expense.GetDB()
 
 	e.POST("/expenses", db.CreateExpenseHandler)
