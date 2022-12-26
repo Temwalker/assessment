@@ -73,3 +73,12 @@ func (d *DB) UpdateExpenseByIDHandler(c echo.Context) error {
 	}
 	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
 }
+
+func (d *DB) GetAllExpensesHandler(c echo.Context) error {
+	expenses := []Expense{}
+	err := d.SelectAllExpenses(&expenses)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
+	}
+	return c.JSON(http.StatusOK, expenses)
+}

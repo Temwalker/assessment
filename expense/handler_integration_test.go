@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -231,6 +232,53 @@ func TestDBUpdateExpenseByID(t *testing.T) {
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.httpStatus, rec.Code)
 				assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+			}
+		})
+	}
+}
+
+func TestDBGetAllExpenses(t *testing.T) {
+	for i := 0; i < 2; i++ {
+		_, err := seedExpense()
+		if err != nil {
+			t.Fatal("can't seed expense : ", err)
+		}
+	}
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	tests := []struct {
+		testname     string
+		wantClosedDB bool
+		httpStatus   int
+		want         interface{}
+	}{
+		{"Get All Expenses Return HTTP OK and Query Expense", false, http.StatusOK, 0},
+		{"Get All Expenses but DB close Return HTTP Internal Error", true, http.StatusInternalServerError, Err{"Internal error"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.testname, func(t *testing.T) {
+			expected, _ := json.Marshal(tt.want)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			db := GetDB()
+			if tt.wantClosedDB {
+				db.DiscDB()
+			} else {
+				defer db.DiscDB()
+			}
+
+			err := db.GetAllExpensesHandler(c)
+			if assert.NoError(t, err) {
+				assert.Equal(t, tt.httpStatus, rec.Code)
+				if reflect.TypeOf(tt.want) == reflect.TypeOf(0) {
+					respEx := []Expense{}
+					json.Unmarshal(rec.Body.Bytes(), &respEx)
+					assert.Less(t, tt.want, len(respEx))
+				} else {
+					assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+				}
 			}
 		})
 	}

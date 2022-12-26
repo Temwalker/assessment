@@ -184,3 +184,27 @@ func TestServerUpdateExpenseByID(t *testing.T) {
 		})
 	}
 }
+
+func TestServerGetAllExpenses(t *testing.T) {
+	_, err := seedExpense()
+	if err != nil {
+		t.Fatal("can't seed expense : ", err)
+	}
+	t.Run("Get All Expenses Return HTTP OK and Query Expenses", func(t *testing.T) {
+		res := request(http.MethodGet, uri("expenses"), "November 10, 2009", nil)
+		got := []expense.Expense{}
+		err := res.Decode(&got)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusOK, res.StatusCode)
+			assert.Less(t, 0, len(got))
+		}
+	})
+
+	t.Run("Get All Expenses but Authorization failed Return HTTP Status Unauthorized", func(t *testing.T) {
+		res := request(http.MethodGet, uri("expenses"), "HELLO", nil)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		}
+	})
+
+}

@@ -393,3 +393,130 @@ func TestUpdateExpenseByID(t *testing.T) {
 		}
 	})
 }
+
+func TestGetAllExpenses(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/expenses", nil)
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	t.Run("Get All Expenses Return HTTP OK and Query Expenses", func(t *testing.T) {
+		expected := 2
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockReturnRows := sqlmock.NewRows([]string{"id", "title", "amount", "note", "tags"}).
+			AddRow(1, "strawberry smoothie", 79.00, "night market promotion discount 10 bath", pq.Array([]string{"food", "beverage"})).
+			AddRow(2, "apple smoothie", 89.00, "no discount", pq.Array([]string{"beverage"}))
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT (.+) FROM expenses").
+			ExpectQuery().
+			WillReturnRows(mockReturnRows)
+
+		mdb := DB{db}
+
+		err = mdb.GetAllExpensesHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			respEx := []Expense{}
+			json.Unmarshal(rec.Body.Bytes(), &respEx)
+			assert.Equal(t, expected, len(respEx))
+		}
+	})
+
+	t.Run("Get All Expenses but no rows return Return HTTP OK and empty slice", func(t *testing.T) {
+		expected := 0
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockReturnRows := sqlmock.NewRows([]string{"id", "title", "amount", "note", "tags"})
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT (.+) FROM expenses").
+			ExpectQuery().
+			WillReturnRows(mockReturnRows)
+
+		mdb := DB{db}
+
+		err = mdb.GetAllExpensesHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			respEx := []Expense{}
+			json.Unmarshal(rec.Body.Bytes(), &respEx)
+			assert.Equal(t, expected, len(respEx))
+		}
+	})
+
+	t.Run("Get All Expenses but can not scan query into variable Return HTTP Internal Error", func(t *testing.T) {
+		want := Err{"Internal error"}
+		expected, _ := json.Marshal(want)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockReturnRows := sqlmock.NewRows([]string{"id", "title", "amount", "note"}).
+			AddRow(1, "strawberry smoothie", 79.00, "night market promotion discount 10 bath")
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT (.+) FROM expenses").
+			ExpectQuery().
+			WillReturnRows(mockReturnRows)
+
+		mdb := DB{db}
+
+		err = mdb.GetAllExpensesHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
+	t.Run("Get All Expenses but DB close when query Return HTTP Internal Error", func(t *testing.T) {
+		want := Err{"Internal error"}
+		expected, _ := json.Marshal(want)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT (.+) FROM expenses").ExpectQuery().
+			WillReturnError(sql.ErrConnDone)
+
+		mdb := DB{db}
+
+		err = mdb.GetAllExpensesHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
+	t.Run("Get All Expenses but DB close when prepare Return HTTP Internal Error", func(t *testing.T) {
+		want := Err{"Internal error"}
+		expected, _ := json.Marshal(want)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT (.+) FROM expenses").WillReturnError(sql.ErrConnDone)
+
+		mdb := DB{db}
+
+		err = mdb.GetAllExpensesHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
+}
