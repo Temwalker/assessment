@@ -129,3 +129,58 @@ func TestServerGetExpenseByID(t *testing.T) {
 		})
 	}
 }
+
+func TestServerUpdateExpenseByID(t *testing.T) {
+	seed, err := seedExpense()
+	if err != nil {
+		t.Fatal("can't seed expense : ", err)
+	}
+	wantOK := expense.Expense{
+		ID:     seed.ID,
+		Title:  "apple smoothie",
+		Amount: 89,
+		Note:   "no discount",
+		Tags:   []string{"beverage"},
+	}
+	tests := []struct {
+		testname   string
+		auth       string
+		id         string
+		testdata   string
+		httpStatus int
+		want       interface{}
+	}{
+		{"Update Expense By ID Return HTTP OK and Query Expense", "November 10, 2009", strconv.Itoa(seed.ID),
+			`{
+			"id": ` + strconv.Itoa(seed.ID) + `,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]}`, http.StatusOK, wantOK},
+		{"Update Expense By ID but not found Return HTTP Status Bad Request", "November 10, 2009", "0",
+			`{
+			"id": ` + strconv.Itoa(0) + `,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]}`, http.StatusBadRequest, expense.Err{Msg: "Expense not found"}},
+		{"Update Expense By ID but Authorization failed Return HTTP Status Unauthorized", "HELLO", strconv.Itoa(seed.ID),
+			`{
+			"id": ` + strconv.Itoa(seed.ID) + `,
+			"title": "apple smoothie",
+			"amount": 89,
+			"note": "no discount", 
+			"tags": ["beverage"]}`, http.StatusUnauthorized, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.testname, func(t *testing.T) {
+			expected, _ := json.Marshal(tt.want)
+			res := request(http.MethodPut, uri("expenses", tt.id), tt.auth, bytes.NewBufferString(tt.testdata))
+			got, err := res.DecodeString()
+			if assert.NoError(t, err) {
+				assert.Equal(t, tt.httpStatus, res.StatusCode)
+				assert.Equal(t, string(expected), strings.TrimSpace(got))
+			}
+		})
+	}
+}
