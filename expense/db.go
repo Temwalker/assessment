@@ -107,9 +107,10 @@ func (d *DB) UpdateExpenseByID(rowId int, ex *Expense) error {
 }
 
 func (d *DB) SelectAllExpenses(expenses *[]Expense) error {
-	sqlStatement := `SELECT * FROM expenses`
+	sqlStatement := "SELECT * FROM expenses;"
 	stmt, err := d.Database.Prepare(sqlStatement)
 	if err != nil {
+		log.Fatal("can't Prepare : ", err)
 		return err
 	}
 	rows, err := stmt.Query()
