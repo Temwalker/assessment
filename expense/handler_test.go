@@ -425,4 +425,30 @@ func TestGetAllExpenses(t *testing.T) {
 			assert.Equal(t, expected, len(respEx))
 		}
 	})
+
+	t.Run("Get All Expenses but no rows return Return HTTP OK and empty slice", func(t *testing.T) {
+		expected := 0
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		mockReturnRows := sqlmock.NewRows([]string{"id", "title", "amount", "note", "tags"})
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT (.+) FROM expenses").
+			ExpectQuery().
+			WillReturnRows(mockReturnRows)
+
+		mdb := DB{db}
+
+		err = mdb.GetAllExpensesHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			respEx := []Expense{}
+			json.Unmarshal(rec.Body.Bytes(), &respEx)
+			assert.Equal(t, expected, len(respEx))
+		}
+	})
+
 }
