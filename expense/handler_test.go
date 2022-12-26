@@ -476,4 +476,25 @@ func TestGetAllExpenses(t *testing.T) {
 		}
 	})
 
+	t.Run("Get All Expenses but DB close Return HTTP Internal Error", func(t *testing.T) {
+		want := Err{"Internal error"}
+		expected, _ := json.Marshal(want)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPrepare("SELECT (.+) FROM expenses").WillReturnError(sql.ErrConnDone)
+
+		mdb := DB{db}
+
+		err = mdb.GetAllExpensesHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
 }
