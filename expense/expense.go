@@ -42,3 +42,11 @@ func (ex Expense) returnByIDHandler(c echo.Context, sqlErr error) error {
 	}
 	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
 }
+
+func (ex *Expense) bindRequestBody(c echo.Context) (bool, error) {
+	err := c.Bind(&ex)
+	if err != nil || ex.checkEmptyField() {
+		return true, c.JSON(http.StatusBadRequest, Err{Msg: "Invalid request body"})
+	}
+	return false, nil
+}
