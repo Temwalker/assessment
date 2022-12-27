@@ -1,7 +1,6 @@
 package expense
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -31,16 +30,6 @@ func (ex Expense) checkEmptyField() bool {
 		return true
 	}
 	return false
-}
-
-func (ex Expense) returnByIDHandler(c echo.Context, sqlErr error) error {
-	if sqlErr == nil {
-		return c.JSON(http.StatusOK, ex)
-	}
-	if sqlErr.Error() == sql.ErrNoRows.Error() {
-		return c.JSON(http.StatusBadRequest, Err{Msg: "Expense not found"})
-	}
-	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
 }
 
 func (ex *Expense) bindRequestBody(c echo.Context) (bool, error) {

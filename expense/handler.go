@@ -1,6 +1,7 @@
 package expense
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -16,9 +17,34 @@ func getIDParam(c echo.Context) (int, bool, error) {
 	return intVar, false, nil
 }
 
+func bindRequestBody(c echo.Context, ex *Expense) (bool, error) {
+	err := c.Bind(&ex)
+	if err != nil || ex.checkEmptyField() {
+		return true, c.JSON(http.StatusBadRequest, Err{Msg: "Invalid request body"})
+	}
+	return false, nil
+}
+
+func returnExpenseByID(err error, c echo.Context, ex Expense) error {
+	if err == nil {
+		return c.JSON(http.StatusOK, ex)
+	}
+	if err.Error() == sql.ErrNoRows.Error() {
+		return c.JSON(http.StatusBadRequest, Err{Msg: "Expense not found"})
+	}
+	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
+}
+
+func returnExpensesList(err error, c echo.Context, expenses []Expense) error {
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
+	}
+	return c.JSON(http.StatusOK, expenses)
+}
+
 func (d *DB) CreateExpenseHandler(c echo.Context) error {
 	ex := Expense{}
-	ifErr, respErr := ex.bindRequestBody(c)
+	ifErr, respErr := bindRequestBody(c, &ex)
 	if ifErr {
 		return respErr
 	}
@@ -35,7 +61,8 @@ func (d *DB) GetExpenseByIdHandler(c echo.Context) error {
 		return respErr
 	}
 	ex := Expense{}
-	return ex.returnByIDHandler(c, d.SelectExpenseByID(intVar, &ex))
+	err := d.SelectExpenseByID(intVar, &ex)
+	return returnExpenseByID(err, c, ex)
 }
 
 func (d *DB) UpdateExpenseByIDHandler(c echo.Context) error {
@@ -44,18 +71,16 @@ func (d *DB) UpdateExpenseByIDHandler(c echo.Context) error {
 		return respErr
 	}
 	ex := Expense{}
-	ifErr, respErr = ex.bindRequestBody(c)
+	ifErr, respErr = bindRequestBody(c, &ex)
 	if ifErr {
 		return respErr
 	}
-	return ex.returnByIDHandler(c, d.UpdateExpenseByID(intVar, &ex))
+	err := d.UpdateExpenseByID(intVar, &ex)
+	return returnExpenseByID(err, c, ex)
 }
 
 func (d *DB) GetAllExpensesHandler(c echo.Context) error {
 	expenses := []Expense{}
 	err := d.SelectAllExpenses(&expenses)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
-	}
-	return c.JSON(http.StatusOK, expenses)
+	return returnExpensesList(err, c, expenses)
 }
