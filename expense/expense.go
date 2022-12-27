@@ -1,11 +1,5 @@
 package expense
 
-import (
-	"net/http"
-
-	"github.com/labstack/echo/v4"
-)
-
 type Expense struct {
 	ID     int      `json:"id"`
 	Title  string   `json:"title"`
@@ -30,12 +24,4 @@ func (ex Expense) checkEmptyField() bool {
 		return true
 	}
 	return false
-}
-
-func (ex *Expense) bindRequestBody(c echo.Context) (bool, error) {
-	err := c.Bind(&ex)
-	if err != nil || ex.checkEmptyField() {
-		return true, c.JSON(http.StatusBadRequest, Err{Msg: "Invalid request body"})
-	}
-	return false, nil
 }

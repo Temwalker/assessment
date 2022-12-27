@@ -16,88 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDBCreateExpense(t *testing.T) {
-	e := echo.New()
-	body := bytes.NewBufferString(`{
-		"title": "strawberry smoothie",
-		"amount": 79,
-		"note": "night market promotion discount 10 bath", 
-		"tags": ["food", "beverage"]
-	}`)
-	req := httptest.NewRequest(http.MethodPost, "/expenses", body)
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	db := GetDB()
-	defer db.DiscDB()
-
-	err := db.CreateExpenseHandler(c)
-	got := Expense{}
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusCreated, rec.Code)
-		json.Unmarshal(rec.Body.Bytes(), &got)
-		assert.Greater(t, got.ID, int(0))
-	}
-
-}
-
-func TestDBCreateExpenseWithNoneJson(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	db := GetDB()
-	defer db.DiscDB()
-
-	err := db.CreateExpenseHandler(c)
-
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	}
-}
-
-func TestDBCreateExpenseWithEmptyJson(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	db := GetDB()
-	defer db.DiscDB()
-
-	err := db.CreateExpenseHandler(c)
-
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	}
-}
-
-func TestDBCreateExpenseWithNoConnection(t *testing.T) {
-	e := echo.New()
-	body := bytes.NewBufferString(`{
-		"title": "strawberry smoothie",
-		"amount": 79,
-		"note": "night market promotion discount 10 bath", 
-		"tags": ["food", "beverage"]
-	}`)
-	req := httptest.NewRequest(http.MethodPost, "/expenses", body)
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	db := GetDB()
-	db.DiscDB()
-
-	err := db.CreateExpenseHandler(c)
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	}
-}
-
 func seedExpense() (Expense, error) {
 	e := echo.New()
 	body := bytes.NewBufferString(`{
@@ -121,6 +39,90 @@ func seedExpense() (Expense, error) {
 	}
 	json.Unmarshal(rec.Body.Bytes(), &got)
 	return got, nil
+}
+
+func TestDBCreateExpense(t *testing.T) {
+	t.Run("Create Expense Return HTTP StatusCreated and Created Expense", func(t *testing.T) {
+		e := echo.New()
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db := GetDB()
+		defer db.DiscDB()
+
+		err := db.CreateExpenseHandler(c)
+		got := Expense{}
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusCreated, rec.Code)
+			json.Unmarshal(rec.Body.Bytes(), &got)
+			assert.Greater(t, got.ID, int(0))
+		}
+	})
+
+	t.Run("Create Expense with none JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db := GetDB()
+		defer db.DiscDB()
+
+		err := db.CreateExpenseHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+
+	t.Run("Create Expense with empty JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db := GetDB()
+		defer db.DiscDB()
+
+		err := db.CreateExpenseHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+
+	t.Run("Create Expense but no DB Conn Return HTTP StatusInternalServerError", func(t *testing.T) {
+		e := echo.New()
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db := GetDB()
+		db.DiscDB()
+
+		err := db.CreateExpenseHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
+	})
+
 }
 
 func TestDBGetExpenseByID(t *testing.T) {

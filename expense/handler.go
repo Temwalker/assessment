@@ -35,6 +35,13 @@ func returnExpenseByID(err error, c echo.Context, ex Expense) error {
 	return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
 }
 
+func returnExpenseCreated(err error, c echo.Context, ex Expense) error {
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
+	}
+	return c.JSON(http.StatusCreated, ex)
+}
+
 func returnExpensesList(err error, c echo.Context, expenses []Expense) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
@@ -49,10 +56,7 @@ func (d *DB) CreateExpenseHandler(c echo.Context) error {
 		return respErr
 	}
 	err := d.InsertExpense(&ex)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Msg: "Internal error"})
-	}
-	return c.JSON(http.StatusCreated, ex)
+	return returnExpenseCreated(err, c, ex)
 }
 
 func (d *DB) GetExpenseByIdHandler(c echo.Context) error {
