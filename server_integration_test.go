@@ -59,32 +59,6 @@ func (r *Response) DecodeString() (string, error) {
 	return string(body), nil
 }
 
-func TestServerCreateExpense(t *testing.T) {
-	body := bytes.NewBufferString(`{
-		"title": "strawberry smoothie",
-		"amount": 79,
-		"note": "night market promotion discount 10 bath", 
-		"tags": ["food", "beverage"]
-	}`)
-	res := request(http.MethodPost, uri("expenses"), "November 10, 2009", body)
-	got := expense.Expense{}
-	err := res.Decode(&got)
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusCreated, res.StatusCode)
-		assert.Equal(t, "strawberry smoothie", got.Title)
-		assert.Greater(t, got.ID, int(0))
-	}
-}
-
-func TestServerCreateExpenseWithNoneJson(t *testing.T) {
-	body := bytes.NewBufferString("1234")
-	res := request(http.MethodPost, uri("expenses"), "November 10, 2009", body)
-	got := expense.Expense{}
-	err := res.Decode(&got)
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-	}
-}
 func seedExpense() (expense.Expense, error) {
 	body := bytes.NewBufferString(`{
 		"title": "strawberry smoothie",
@@ -99,6 +73,35 @@ func seedExpense() (expense.Expense, error) {
 		return got, err
 	}
 	return got, nil
+}
+
+func TestServerCreateExpense(t *testing.T) {
+	t.Run("Create Expense Return HTTP StatusCreated and Created Expense", func(t *testing.T) {
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		res := request(http.MethodPost, uri("expenses"), "November 10, 2009", body)
+		got := expense.Expense{}
+		err := res.Decode(&got)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusCreated, res.StatusCode)
+			assert.Equal(t, "strawberry smoothie", got.Title)
+			assert.Greater(t, got.ID, int(0))
+		}
+	})
+
+	t.Run("Create Expense with none JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		body := bytes.NewBufferString("1234")
+		res := request(http.MethodPost, uri("expenses"), "November 10, 2009", body)
+		got := expense.Expense{}
+		err := res.Decode(&got)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+		}
+	})
 }
 
 func TestServerGetExpenseByID(t *testing.T) {
