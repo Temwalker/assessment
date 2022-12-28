@@ -34,11 +34,25 @@ func getIDParam(c echo.Context) (int, bool, error) {
 }
 
 func bindRequestBody(c echo.Context, ex *Expense) (bool, error) {
-	err := c.Bind(&ex)
-	if err != nil || ex.checkEmptyField() {
+	err := c.Bind(ex)
+	if err != nil || checkEmptyField(*ex) {
 		return true, c.JSON(http.StatusBadRequest, Err{Msg: "Invalid request body"})
 	}
 	return false, nil
+}
+
+func checkEmptyField(ex Expense) bool {
+	//check only string field
+	if len(ex.Title) == 0 {
+		return true
+	}
+	if len(ex.Note) == 0 {
+		return true
+	}
+	if len(ex.Tags) == 0 {
+		return true
+	}
+	return false
 }
 
 func returnExpenseByID(err error, c echo.Context, ex Expense) error {
