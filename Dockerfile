@@ -8,11 +8,11 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 go test -v ./...
+RUN CGO_ENABLED=0 go test -v --tags=unit ./...
 
-RUN go build -o ./out/go-app .
+RUN go build -o ./out/assessment .
 
 FROM alpine:3.16.2
-COPY --from=build-base /app/out/go-app /app/go-app
+COPY --from=build-base /app/out/assessment /app/assessment
 
-CMD ["/app/go-app"]
+CMD ["/app/assessment"]

@@ -181,3 +181,33 @@
 * แต่ละ story ควรใช้ branch ของตัวเองแล้ว merge กลับไปที่ main ด้วย 3-way merge
 ![ตัวอย่าง](three-way-merge.png)
 
+
+## CMD
+* To run unit test
+```console
+	go test -v --tags=unit ./...
+```
+* To run DB integration test
+```console
+	docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from it_tests
+```
+* Teardown DB Integration test
+```console
+	docker-compose -f docker-compose.test.yml down
+```
+* To run Server & DB integration test
+```console
+	docker-compose -f docker-compose.server.db.test.yml up --build --abort-on-container-exit --exit-code-from it_tests
+```
+* Teardown Server & DB Integration test
+```console
+	docker-compose -f docker-compose.server.db.test.yml down
+```
+* Build App and run container (replace the DATABASE_URL value with Database URL)
+```console
+	docker build -t assessment:latest .
+	docker run -e PORT=:2565 \
+	   -e DATABASE_URL=postgres://dburl \
+	   -p 2565:2565 \
+	   -d assessment:latest\
+```
