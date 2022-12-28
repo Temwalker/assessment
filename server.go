@@ -15,31 +15,10 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func main() {
-	e := echo.New()
-	setMiddleware(e)
-	h := setRoute(e)
-	go startServer(e)
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
-	<-shutdown
-	h.Close()
-	shutDownServer(e)
-}
-
-func shutDownServer(e *echo.Echo) {
-	fmt.Println("shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := e.Shutdown(ctx); err != nil {
-		e.Logger.Fatal(err)
-	}
-}
-func startServer(e *echo.Echo) {
-	fmt.Println("start at port:", os.Getenv("PORT"))
-	if err := e.Start(os.Getenv("PORT")); err != nil && err != http.ErrServerClosed {
-		e.Logger.Fatal("shutting down the server")
-	}
+func setMiddleware(e *echo.Echo) {
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.Use(customMiddleware.Authorizer)
 }
 
 func setRoute(e *echo.Echo) expense.Handler {
@@ -51,8 +30,30 @@ func setRoute(e *echo.Echo) expense.Handler {
 	return h
 }
 
-func setMiddleware(e *echo.Echo) {
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	e.Use(customMiddleware.Authorizer)
+func startServer(e *echo.Echo) {
+	fmt.Println("start at port:", os.Getenv("PORT"))
+	if err := e.Start(os.Getenv("PORT")); err != nil && err != http.ErrServerClosed {
+		e.Logger.Fatal("shutting down the server")
+	}
+}
+
+func shutDownServer(e *echo.Echo) {
+	fmt.Println("shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
+	}
+}
+
+func main() {
+	e := echo.New()
+	setMiddleware(e)
+	h := setRoute(e)
+	go startServer(e)
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+	<-shutdown
+	defer h.Close()
+	shutDownServer(e)
 }

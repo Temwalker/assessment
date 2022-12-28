@@ -25,16 +25,6 @@ func InsertExpense(d *database.DB, ex *Expense) error {
 	return row.Scan(&ex.ID)
 }
 
-func SelectExpenseByID(d *database.DB, rowId int, ex *Expense) error {
-	stmt, err := d.Database.Prepare("SELECT id,title,amount,note,tags FROM expenses where id=$1")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	row := stmt.QueryRow(rowId)
-	return row.Scan(&ex.ID, &ex.Title, &ex.Amount, &ex.Note, pq.Array(&ex.Tags))
-}
-
 func UpdateExpenseByID(d *database.DB, rowId int, ex *Expense) error {
 	sqlStatement := `
 	UPDATE expenses
@@ -48,6 +38,16 @@ func UpdateExpenseByID(d *database.DB, rowId int, ex *Expense) error {
 	defer stmt.Close()
 	row := stmt.QueryRow(rowId, ex.Title, ex.Amount, ex.Note, pq.Array(&ex.Tags))
 	return row.Scan(&ex.ID)
+}
+
+func SelectExpenseByID(d *database.DB, rowId int, ex *Expense) error {
+	stmt, err := d.Database.Prepare("SELECT id,title,amount,note,tags FROM expenses where id=$1")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	row := stmt.QueryRow(rowId)
+	return row.Scan(&ex.ID, &ex.Title, &ex.Amount, &ex.Note, pq.Array(&ex.Tags))
 }
 
 func SelectAllExpenses(d *database.DB, expenses *[]Expense) error {
