@@ -1,64 +1,9 @@
 package expense
 
 import (
-	"log"
-
 	"github.com/Temwalker/assessment/database"
 	"github.com/lib/pq"
 )
-
-// var lock = &sync.Mutex{}
-
-// type DB struct {
-// 	Database *sql.DB
-// }
-
-// var db *DB
-
-// func initDB() *DB {
-// 	database, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
-// 	if err != nil {
-// 		log.Fatal("Connect to database error :", err)
-// 	}
-// 	db = &DB{
-// 		Database: database,
-// 	}
-// 	err = db.CreateExpenseTable()
-// 	if err != nil {
-// 		log.Fatal("Can't create table : ", err)
-// 	}
-// 	return db
-// }
-
-// func (d *DB) reConnectDB() {
-// 	err := d.Database.Ping()
-// 	if err != nil {
-// 		d.Database, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
-// 		if err != nil {
-// 			log.Fatal("Connect to database error :", err)
-// 		}
-// 	}
-// }
-
-// func GetDB() *DB {
-// 	if db == nil {
-// 		lock.Lock()
-// 		defer lock.Unlock()
-// 		if db == nil {
-// 			db = initDB()
-// 		} else {
-// 			db.reConnectDB()
-// 		}
-// 	} else {
-// 		db.reConnectDB()
-// 	}
-
-// 	return db
-// }
-
-// func (d *DB) CloseDB() {
-// 	d.Database.Close()
-// }
 
 func CreateExpenseTable(d *database.DB) error {
 	createTb := `
@@ -75,7 +20,8 @@ func CreateExpenseTable(d *database.DB) error {
 }
 
 func InsertExpense(d *database.DB, ex *Expense) error {
-	row := d.Database.QueryRow("INSERT INTO expenses (title,amount,note,tags) values ($1,$2,$3,$4) RETURNING id", ex.Title, ex.Amount, ex.Note, pq.Array(&ex.Tags))
+	row := d.Database.QueryRow("INSERT INTO expenses (title,amount,note,tags) values ($1,$2,$3,$4) RETURNING id",
+		ex.Title, ex.Amount, ex.Note, pq.Array(&ex.Tags))
 	return row.Scan(&ex.ID)
 }
 
@@ -105,15 +51,12 @@ func UpdateExpenseByID(d *database.DB, rowId int, ex *Expense) error {
 }
 
 func SelectAllExpenses(d *database.DB, expenses *[]Expense) error {
-	sqlStatement := "SELECT * FROM expenses;"
-	stmt, err := d.Database.Prepare(sqlStatement)
+	stmt, err := d.Database.Prepare("SELECT * FROM expenses;")
 	if err != nil {
-		log.Println("can't prepare ", err)
 		return err
 	}
 	rows, err := stmt.Query()
 	if err != nil {
-		log.Println("can't query all expenses", err)
 		return err
 	}
 	for rows.Next() {
