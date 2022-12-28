@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/Temwalker/assessment/database"
 	"github.com/labstack/echo/v4"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +47,7 @@ func TestCreateExpense(t *testing.T) {
 			WithArgs(want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.CreateExpenseHandler(c)
@@ -69,7 +70,7 @@ func TestCreateExpense(t *testing.T) {
 			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 		}
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.CreateExpenseHandler(c)
@@ -87,7 +88,7 @@ func TestCreateExpense(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		h := Handler{
-			Storage: &DB{},
+			Storage: &database.DB{},
 		}
 
 		err := h.CreateExpenseHandler(c)
@@ -119,7 +120,7 @@ func TestCreateExpense(t *testing.T) {
 		mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
 			WillReturnError(sql.ErrConnDone)
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.CreateExpenseHandler(c)
@@ -160,7 +161,7 @@ func TestGetExpenseByID(t *testing.T) {
 			WillReturnRows(sqlmock.NewRows([]string{"id", "title", "amount", "note", "tags"}).AddRow(want.ID, want.Title, want.Amount, want.Note, pq.Array(&want.Tags)))
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.GetExpenseByIdHandler(c)
@@ -181,7 +182,7 @@ func TestGetExpenseByID(t *testing.T) {
 		c.SetParamValues("NumberOne")
 
 		h := Handler{
-			Storage: &DB{},
+			Storage: &database.DB{},
 		}
 
 		err := h.GetExpenseByIdHandler(c)
@@ -209,7 +210,7 @@ func TestGetExpenseByID(t *testing.T) {
 			ExpectQuery().WithArgs(1).WillReturnError(sql.ErrNoRows)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.GetExpenseByIdHandler(c)
@@ -236,7 +237,7 @@ func TestGetExpenseByID(t *testing.T) {
 		mock.ExpectPrepare("SELECT id,title,amount,note,tags FROM expenses").WillReturnError(sql.ErrConnDone)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.GetExpenseByIdHandler(c)
@@ -284,7 +285,7 @@ func TestUpdateExpenseByID(t *testing.T) {
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(want.ID))
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.UpdateExpenseByIDHandler(c)
@@ -312,7 +313,7 @@ func TestUpdateExpenseByID(t *testing.T) {
 		c.SetParamValues("NumberOne")
 
 		h := Handler{
-			Storage: &DB{},
+			Storage: &database.DB{},
 		}
 
 		err := h.UpdateExpenseByIDHandler(c)
@@ -364,7 +365,7 @@ func TestUpdateExpenseByID(t *testing.T) {
 			c.SetParamValues("1")
 
 			h := Handler{
-				Storage: &DB{},
+				Storage: &database.DB{},
 			}
 
 			err := h.UpdateExpenseByIDHandler(c)
@@ -403,7 +404,7 @@ func TestUpdateExpenseByID(t *testing.T) {
 			WillReturnError(sql.ErrNoRows)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.UpdateExpenseByIDHandler(c)
@@ -439,7 +440,7 @@ func TestUpdateExpenseByID(t *testing.T) {
 		mock.ExpectPrepare("UPDATE expenses").WillReturnError(sql.ErrConnDone)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.UpdateExpenseByIDHandler(c)
@@ -472,7 +473,7 @@ func TestGetAllExpenses(t *testing.T) {
 			WillReturnRows(mockReturnRows)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.GetAllExpensesHandler(c)
@@ -500,7 +501,7 @@ func TestGetAllExpenses(t *testing.T) {
 			WillReturnRows(mockReturnRows)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.GetAllExpensesHandler(c)
@@ -529,7 +530,7 @@ func TestGetAllExpenses(t *testing.T) {
 			WillReturnRows(mockReturnRows)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.GetAllExpensesHandler(c)
@@ -553,7 +554,7 @@ func TestGetAllExpenses(t *testing.T) {
 			WillReturnError(sql.ErrConnDone)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.GetAllExpensesHandler(c)
@@ -576,7 +577,7 @@ func TestGetAllExpenses(t *testing.T) {
 		mock.ExpectPrepare("SELECT (.+) FROM expenses").WillReturnError(sql.ErrConnDone)
 
 		h := Handler{
-			Storage: &DB{db},
+			Storage: &database.DB{Database: db},
 		}
 
 		err = h.GetAllExpensesHandler(c)

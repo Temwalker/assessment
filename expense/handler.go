@@ -5,15 +5,17 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Temwalker/assessment/database"
 	"github.com/labstack/echo/v4"
 )
 
 type Handler struct {
-	Storage *DB
+	Storage *database.DB
 }
 
 func NewHandler() Handler {
-	db := GetDB()
+	db := database.GetDB()
+	CreateExpenseTable(db)
 	return Handler{
 		Storage: db,
 	}
@@ -69,7 +71,7 @@ func (h Handler) CreateExpenseHandler(c echo.Context) error {
 	if ifErr {
 		return respErr
 	}
-	err := h.Storage.InsertExpense(&ex)
+	err := InsertExpense(h.Storage, &ex)
 	return returnExpenseCreated(err, c, ex)
 }
 
@@ -79,7 +81,7 @@ func (h Handler) GetExpenseByIdHandler(c echo.Context) error {
 		return respErr
 	}
 	ex := Expense{}
-	err := h.Storage.SelectExpenseByID(intVar, &ex)
+	err := SelectExpenseByID(h.Storage, intVar, &ex)
 	return returnExpenseByID(err, c, ex)
 }
 
@@ -93,12 +95,12 @@ func (h Handler) UpdateExpenseByIDHandler(c echo.Context) error {
 	if ifErr {
 		return respErr
 	}
-	err := h.Storage.UpdateExpenseByID(intVar, &ex)
+	err := UpdateExpenseByID(h.Storage, intVar, &ex)
 	return returnExpenseByID(err, c, ex)
 }
 
 func (h Handler) GetAllExpensesHandler(c echo.Context) error {
 	expenses := []Expense{}
-	err := h.Storage.SelectAllExpenses(&expenses)
+	err := SelectAllExpenses(h.Storage, &expenses)
 	return returnExpensesList(err, c, expenses)
 }
