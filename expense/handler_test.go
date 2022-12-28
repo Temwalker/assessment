@@ -1,10 +1,9 @@
-//go:build unit
-
 package expense
 
 import (
 	"bytes"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -13,84 +12,188 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/Temwalker/assessment/database"
 	"github.com/labstack/echo/v4"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCreateHandler(t *testing.T) {
+	t.Run("Create Handler Success (DB Connnection OK , Create Table OK)", func(t *testing.T) {
+		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPing().WillReturnError(nil)
+		mock.ExpectExec("CREATE TABLE IF NOT EXISTS expenses (.+)").WillReturnResult(driver.ResultNoRows)
+		d, _ := database.GetDB()
+		d.Database = db
+		assert.NotPanics(t, func() { NewHandler() })
+	})
+
+	t.Run("Create Handler but handler can not Create Table Should Panic", func(t *testing.T) {
+		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPing().WillReturnError(nil)
+		mock.ExpectExec("CREATE TABLE IF NOT EXISTS expenses (.+)").WillReturnError(sql.ErrConnDone)
+		d, _ := database.GetDB()
+		d.Database = db
+		assert.Panics(t, func() { NewHandler() })
+	})
+
+	t.Run("Create Handler but handler can not get DB connection Should Panic", func(t *testing.T) {
+		assert.Panics(t, func() { NewHandler() })
+	})
+}
+
+func TestCloseHandler(t *testing.T) {
+	t.Run("Close Handler Success", func(t *testing.T) {
+		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPing().WillReturnError(nil)
+		mock.ExpectExec("CREATE TABLE IF NOT EXISTS expenses (.+)").WillReturnResult(driver.ResultNoRows)
+		mock.ExpectClose().WillReturnError(nil)
+		d, _ := database.GetDB()
+		d.Database = db
+		h := NewHandler()
+		err = h.Close()
+		assert.NoError(t, err)
+	})
+	t.Run("Close Handler Fail", func(t *testing.T) {
+		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPing().WillReturnError(nil)
+		mock.ExpectExec("CREATE TABLE IF NOT EXISTS expenses (.+)").WillReturnResult(driver.ResultNoRows)
+		mock.ExpectClose().WillReturnError(assert.AnError)
+		d, _ := database.GetDB()
+		d.Database = db
+		h := NewHandler()
+		err = h.Close()
+		assert.Error(t, err)
+
+	})
+}
+
 func TestCreateExpense(t *testing.T) {
-	want := Expense{
-		ID:     1,
-		Title:  "strawberry smoothie",
-		Amount: 79,
-		Note:   "night market promotion discount 10 bath",
-		Tags:   []string{"food", "beverage"},
-	}
-	expected, _ := json.Marshal(want)
-	e := echo.New()
-	body := bytes.NewBufferString(`{
-		"title": "strawberry smoothie",
-		"amount": 79,
-		"note": "night market promotion discount 10 bath", 
-		"tags": ["food", "beverage"]
-	}`)
-	req := httptest.NewRequest(http.MethodPost, "/expenses", body)
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	t.Run("Create Expense Return HTTP StatusCreated and Created Expense", func(t *testing.T) {
+		want := Expense{
+			ID:     1,
+			Title:  "strawberry smoothie",
+			Amount: 79,
+			Note:   "night market promotion discount 10 bath",
+			Tags:   []string{"food", "beverage"},
+		}
+		expected, _ := json.Marshal(want)
+		e := echo.New()
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
 
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
-		WithArgs(want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mdb := DB{db}
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
+			WithArgs(want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-	err = mdb.CreateExpenseHandler(c)
+		err = h.CreateExpenseHandler(c)
 
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusCreated, rec.Code)
-		assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
-	}
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusCreated, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
 
-}
+	t.Run("Create Expense with none JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
 
-func TestCreateExpenseWithNoneJson(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+		db, _, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	mdb := DB{db}
+		err = h.CreateExpenseHandler(c)
 
-	err = mdb.CreateExpenseHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
 
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	}
-}
+	t.Run("Create Expense with Empty JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
 
-func TestCreateExpenseWithEmptyJson(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+		h := Handler{
+			Storage: &database.DB{},
+		}
 
-	mdb := DB{}
+		err := h.CreateExpenseHandler(c)
 
-	err := mdb.CreateExpenseHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
 
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	}
+	t.Run("Create Expense When DB Close Return HTTP Internal Error", func(t *testing.T) {
+		want := Err{Msg: "Internal error"}
+		expected, _ := json.Marshal(want)
+		e := echo.New()
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
+			WillReturnError(sql.ErrConnDone)
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
+
+		err = h.CreateExpenseHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
+		}
+	})
+
 }
 
 func TestGetExpenseByID(t *testing.T) {
@@ -120,9 +223,11 @@ func TestGetExpenseByID(t *testing.T) {
 			ExpectQuery().WithArgs(1).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "title", "amount", "note", "tags"}).AddRow(want.ID, want.Title, want.Amount, want.Note, pq.Array(&want.Tags)))
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.GetExpenseByIdHandler(c)
+		err = h.GetExpenseByIdHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -139,9 +244,11 @@ func TestGetExpenseByID(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues("NumberOne")
 
-		mdb := &DB{}
+		h := Handler{
+			Storage: &database.DB{},
+		}
 
-		err := mdb.GetExpenseByIdHandler(c)
+		err := h.GetExpenseByIdHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -165,9 +272,11 @@ func TestGetExpenseByID(t *testing.T) {
 		mock.ExpectPrepare("SELECT id,title,amount,note,tags FROM expenses").
 			ExpectQuery().WithArgs(1).WillReturnError(sql.ErrNoRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.GetExpenseByIdHandler(c)
+		err = h.GetExpenseByIdHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -190,9 +299,11 @@ func TestGetExpenseByID(t *testing.T) {
 		}
 		mock.ExpectPrepare("SELECT id,title,amount,note,tags FROM expenses").WillReturnError(sql.ErrConnDone)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.GetExpenseByIdHandler(c)
+		err = h.GetExpenseByIdHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -236,9 +347,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 			ExpectQuery().WithArgs(want.ID, want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(want.ID))
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.UpdateExpenseByIDHandler(c)
+		err = h.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -262,9 +375,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues("NumberOne")
 
-		mdb := &DB{}
+		h := Handler{
+			Storage: &database.DB{},
+		}
 
-		err := mdb.UpdateExpenseByIDHandler(c)
+		err := h.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -312,9 +427,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 			c.SetParamNames("id")
 			c.SetParamValues("1")
 
-			mdb := DB{}
+			h := Handler{
+				Storage: &database.DB{},
+			}
 
-			err := mdb.UpdateExpenseByIDHandler(c)
+			err := h.UpdateExpenseByIDHandler(c)
 
 			if assert.NoError(t, err) {
 				assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -349,9 +466,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 			ExpectQuery().WithArgs(1, "apple smoothie", 89.00, "no discount", pq.Array(&[]string{"beverage"})).
 			WillReturnError(sql.ErrNoRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.UpdateExpenseByIDHandler(c)
+		err = h.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -383,9 +502,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 		}
 		mock.ExpectPrepare("UPDATE expenses").WillReturnError(sql.ErrConnDone)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.UpdateExpenseByIDHandler(c)
+		err = h.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -414,9 +535,11 @@ func TestGetAllExpenses(t *testing.T) {
 			ExpectQuery().
 			WillReturnRows(mockReturnRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -440,9 +563,11 @@ func TestGetAllExpenses(t *testing.T) {
 			ExpectQuery().
 			WillReturnRows(mockReturnRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 			respEx := []Expense{}
@@ -467,9 +592,11 @@ func TestGetAllExpenses(t *testing.T) {
 			ExpectQuery().
 			WillReturnRows(mockReturnRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
@@ -489,9 +616,11 @@ func TestGetAllExpenses(t *testing.T) {
 		mock.ExpectPrepare("SELECT (.+) FROM expenses").ExpectQuery().
 			WillReturnError(sql.ErrConnDone)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
@@ -510,9 +639,11 @@ func TestGetAllExpenses(t *testing.T) {
 		}
 		mock.ExpectPrepare("SELECT (.+) FROM expenses").WillReturnError(sql.ErrConnDone)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &database.DB{Database: db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))

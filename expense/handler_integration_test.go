@@ -16,88 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDBCreateExpense(t *testing.T) {
-	e := echo.New()
-	body := bytes.NewBufferString(`{
-		"title": "strawberry smoothie",
-		"amount": 79,
-		"note": "night market promotion discount 10 bath", 
-		"tags": ["food", "beverage"]
-	}`)
-	req := httptest.NewRequest(http.MethodPost, "/expenses", body)
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	db := GetDB()
-	defer db.DiscDB()
-
-	err := db.CreateExpenseHandler(c)
-	got := Expense{}
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusCreated, rec.Code)
-		json.Unmarshal(rec.Body.Bytes(), &got)
-		assert.Greater(t, got.ID, int(0))
-	}
-
-}
-
-func TestDBCreateExpenseWithNoneJson(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	db := GetDB()
-	defer db.DiscDB()
-
-	err := db.CreateExpenseHandler(c)
-
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	}
-}
-
-func TestDBCreateExpenseWithEmptyJson(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	db := GetDB()
-	defer db.DiscDB()
-
-	err := db.CreateExpenseHandler(c)
-
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	}
-}
-
-func TestDBCreateExpenseWithNoConnection(t *testing.T) {
-	e := echo.New()
-	body := bytes.NewBufferString(`{
-		"title": "strawberry smoothie",
-		"amount": 79,
-		"note": "night market promotion discount 10 bath", 
-		"tags": ["food", "beverage"]
-	}`)
-	req := httptest.NewRequest(http.MethodPost, "/expenses", body)
-	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	db := GetDB()
-	db.DiscDB()
-
-	err := db.CreateExpenseHandler(c)
-	if assert.NoError(t, err) {
-		assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	}
-}
-
 func seedExpense() (Expense, error) {
 	e := echo.New()
 	body := bytes.NewBufferString(`{
@@ -111,16 +29,100 @@ func seedExpense() (Expense, error) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	db := GetDB()
-	defer db.DiscDB()
+	h := NewHandler()
+	defer h.Close()
 
-	err := db.CreateExpenseHandler(c)
+	err := h.CreateExpenseHandler(c)
 	got := Expense{}
 	if err != nil {
 		return got, err
 	}
 	json.Unmarshal(rec.Body.Bytes(), &got)
 	return got, nil
+}
+
+func TestDBCreateExpense(t *testing.T) {
+	t.Run("Create Expense Return HTTP StatusCreated and Created Expense", func(t *testing.T) {
+		e := echo.New()
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		h := NewHandler()
+		defer h.Close()
+
+		err := h.CreateExpenseHandler(c)
+		got := Expense{}
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusCreated, rec.Code)
+			json.Unmarshal(rec.Body.Bytes(), &got)
+			assert.Greater(t, got.ID, int(0))
+		}
+	})
+
+	t.Run("Create Expense with none JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader("1234"))
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		h := NewHandler()
+		defer h.Close()
+
+		err := h.CreateExpenseHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+
+	t.Run("Create Expense with empty JSON Return HTTP StatusBadRequest", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/expenses", strings.NewReader(""))
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		h := NewHandler()
+		defer h.Close()
+
+		err := h.CreateExpenseHandler(c)
+
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+
+	t.Run("Create Expense but no DB Conn Return HTTP StatusInternalServerError", func(t *testing.T) {
+		e := echo.New()
+		body := bytes.NewBufferString(`{
+			"title": "strawberry smoothie",
+			"amount": 79,
+			"note": "night market promotion discount 10 bath", 
+			"tags": ["food", "beverage"]
+		}`)
+		req := httptest.NewRequest(http.MethodPost, "/expenses", body)
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		h := NewHandler()
+		h.Close()
+
+		err := h.CreateExpenseHandler(c)
+		if assert.NoError(t, err) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
+	})
+
 }
 
 func TestDBGetExpenseByID(t *testing.T) {
@@ -151,14 +153,15 @@ func TestDBGetExpenseByID(t *testing.T) {
 			c.SetParamNames("id")
 			c.SetParamValues(tt.id)
 
-			db := GetDB()
+			h := NewHandler()
+
 			if tt.wantClosedDB {
-				db.DiscDB()
+				h.Close()
 			} else {
-				defer db.DiscDB()
+				defer h.Close()
 			}
 
-			err = db.GetExpenseByIdHandler(c)
+			err = h.GetExpenseByIdHandler(c)
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.httpStatus, rec.Code)
 				assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
@@ -221,14 +224,15 @@ func TestDBUpdateExpenseByID(t *testing.T) {
 			c.SetParamNames("id")
 			c.SetParamValues(tt.id)
 
-			db := GetDB()
+			h := NewHandler()
+
 			if tt.wantClosedDB {
-				db.DiscDB()
+				h.Close()
 			} else {
-				defer db.DiscDB()
+				defer h.Close()
 			}
 
-			err = db.UpdateExpenseByIDHandler(c)
+			err = h.UpdateExpenseByIDHandler(c)
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.httpStatus, rec.Code)
 				assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
@@ -262,14 +266,15 @@ func TestDBGetAllExpenses(t *testing.T) {
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 
-			db := GetDB()
+			h := NewHandler()
+
 			if tt.wantClosedDB {
-				db.DiscDB()
+				h.Close()
 			} else {
-				defer db.DiscDB()
+				defer h.Close()
 			}
 
-			err := db.GetAllExpensesHandler(c)
+			err := h.GetAllExpensesHandler(c)
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.httpStatus, rec.Code)
 				if reflect.TypeOf(tt.want) == reflect.TypeOf(0) {
