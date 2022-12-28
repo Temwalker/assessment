@@ -13,7 +13,7 @@ type Handler struct {
 }
 
 func NewHandler() Handler {
-	db := initDB()
+	db := GetDB()
 	return Handler{
 		Storage: db,
 	}
