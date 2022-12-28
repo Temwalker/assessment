@@ -30,7 +30,7 @@ func seedExpense() (Expense, error) {
 	c := e.NewContext(req, rec)
 
 	h := NewHandler()
-	defer h.Storage.DiscDB()
+	defer h.Close()
 
 	err := h.CreateExpenseHandler(c)
 	got := Expense{}
@@ -56,7 +56,7 @@ func TestDBCreateExpense(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		h := NewHandler()
-		defer h.Storage.DiscDB()
+		defer h.Close()
 
 		err := h.CreateExpenseHandler(c)
 		got := Expense{}
@@ -75,7 +75,7 @@ func TestDBCreateExpense(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		h := NewHandler()
-		defer h.Storage.DiscDB()
+		defer h.Close()
 
 		err := h.CreateExpenseHandler(c)
 
@@ -92,7 +92,7 @@ func TestDBCreateExpense(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		h := NewHandler()
-		defer h.Storage.DiscDB()
+		defer h.Close()
 
 		err := h.CreateExpenseHandler(c)
 
@@ -115,7 +115,7 @@ func TestDBCreateExpense(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		h := NewHandler()
-		h.Storage.DiscDB()
+		h.Close()
 
 		err := h.CreateExpenseHandler(c)
 		if assert.NoError(t, err) {
@@ -156,9 +156,9 @@ func TestDBGetExpenseByID(t *testing.T) {
 			h := NewHandler()
 
 			if tt.wantClosedDB {
-				h.Storage.DiscDB()
+				h.Close()
 			} else {
-				defer h.Storage.DiscDB()
+				defer h.Close()
 			}
 
 			err = h.GetExpenseByIdHandler(c)
@@ -227,9 +227,9 @@ func TestDBUpdateExpenseByID(t *testing.T) {
 			h := NewHandler()
 
 			if tt.wantClosedDB {
-				h.Storage.DiscDB()
+				h.Close()
 			} else {
-				defer h.Storage.DiscDB()
+				defer h.Close()
 			}
 
 			err = h.UpdateExpenseByIDHandler(c)
@@ -269,9 +269,9 @@ func TestDBGetAllExpenses(t *testing.T) {
 			h := NewHandler()
 
 			if tt.wantClosedDB {
-				h.Storage.DiscDB()
+				h.Close()
 			} else {
-				defer h.Storage.DiscDB()
+				defer h.Close()
 			}
 
 			err := h.GetAllExpensesHandler(c)

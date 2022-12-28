@@ -58,7 +58,7 @@ func GetDB() *DB {
 	return db
 }
 
-func (d *DB) DiscDB() {
+func (d *DB) CloseDB() {
 	d.Database.Close()
 }
 

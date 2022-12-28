@@ -19,6 +19,9 @@ func NewHandler() Handler {
 	}
 }
 
+func (h Handler) Close() {
+	h.Storage.CloseDB()
+}
 func getIDParam(c echo.Context) (int, bool, error) {
 	id := c.Param("id")
 	intVar, err := strconv.Atoi(id)
@@ -60,7 +63,7 @@ func returnExpensesList(err error, c echo.Context, expenses []Expense) error {
 	return c.JSON(http.StatusOK, expenses)
 }
 
-func (h *Handler) CreateExpenseHandler(c echo.Context) error {
+func (h Handler) CreateExpenseHandler(c echo.Context) error {
 	ex := Expense{}
 	ifErr, respErr := bindRequestBody(c, &ex)
 	if ifErr {
@@ -70,7 +73,7 @@ func (h *Handler) CreateExpenseHandler(c echo.Context) error {
 	return returnExpenseCreated(err, c, ex)
 }
 
-func (h *Handler) GetExpenseByIdHandler(c echo.Context) error {
+func (h Handler) GetExpenseByIdHandler(c echo.Context) error {
 	intVar, ifErr, respErr := getIDParam(c)
 	if ifErr {
 		return respErr
@@ -80,7 +83,7 @@ func (h *Handler) GetExpenseByIdHandler(c echo.Context) error {
 	return returnExpenseByID(err, c, ex)
 }
 
-func (h *Handler) UpdateExpenseByIDHandler(c echo.Context) error {
+func (h Handler) UpdateExpenseByIDHandler(c echo.Context) error {
 	intVar, ifErr, respErr := getIDParam(c)
 	if ifErr {
 		return respErr
@@ -94,7 +97,7 @@ func (h *Handler) UpdateExpenseByIDHandler(c echo.Context) error {
 	return returnExpenseByID(err, c, ex)
 }
 
-func (h *Handler) GetAllExpensesHandler(c echo.Context) error {
+func (h Handler) GetAllExpensesHandler(c echo.Context) error {
 	expenses := []Expense{}
 	err := h.Storage.SelectAllExpenses(&expenses)
 	return returnExpensesList(err, c, expenses)

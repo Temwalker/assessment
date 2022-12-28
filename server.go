@@ -23,7 +23,7 @@ func main() {
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 	<-shutdown
-	h.Storage.DiscDB()
+	h.Close()
 	shutDownServer(e)
 }
 
