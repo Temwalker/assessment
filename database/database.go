@@ -8,7 +8,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var lock = &sync.Mutex{}
+var once sync.Once
 
 type DB struct {
 	Database *sql.DB
@@ -24,7 +24,7 @@ func initDB() *DB {
 	return dbInstance
 }
 
-func (d *DB) reConnectDB() error {
+func (d *DB) checkConnectionDB() error {
 	err := d.Database.Ping()
 	if err != nil {
 		d.Database, _ = sql.Open("postgres", os.Getenv("DATABASE_URL"))
@@ -36,16 +36,13 @@ func (d *DB) reConnectDB() error {
 func GetDB() (*DB, error) {
 	var err error
 	if dbInstance == nil {
-		lock.Lock()
-		defer lock.Unlock()
-		if dbInstance == nil {
-			dbInstance = initDB()
-			err = dbInstance.Database.Ping()
-		} else {
-			err = dbInstance.reConnectDB()
-		}
+		once.Do(
+			func() {
+				dbInstance = initDB()
+				err = dbInstance.Database.Ping()
+			})
 	} else {
-		err = dbInstance.reConnectDB()
+		err = dbInstance.checkConnectionDB()
 	}
 
 	return dbInstance, err
