@@ -2,9 +2,10 @@ package database
 
 import (
 	"database/sql"
-	"log"
 	"os"
 	"sync"
+
+	_ "github.com/lib/pq"
 )
 
 var lock = &sync.Mutex{}
@@ -13,48 +14,43 @@ type DB struct {
 	Database *sql.DB
 }
 
-var db *DB
+var dbInstance *DB
 
 func initDB() *DB {
-	database, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
-	if err != nil {
-		log.Fatal("Connect to database error :", err)
-	}
-	db = &DB{
+	database, _ := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	dbInstance = &DB{
 		Database: database,
 	}
-	if err != nil {
-		log.Fatal("Can't create table : ", err)
-	}
-	return db
+	return dbInstance
 }
 
-func (d *DB) reConnectDB() {
+func (d *DB) reConnectDB() error {
 	err := d.Database.Ping()
 	if err != nil {
-		d.Database, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
-		if err != nil {
-			log.Fatal("Connect to database error :", err)
-		}
+		d.Database, _ = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+		err = d.Database.Ping()
 	}
+	return err
 }
 
-func GetDB() *DB {
-	if db == nil {
+func GetDB() (*DB, error) {
+	var err error
+	if dbInstance == nil {
 		lock.Lock()
 		defer lock.Unlock()
-		if db == nil {
-			db = initDB()
+		if dbInstance == nil {
+			dbInstance = initDB()
+			err = dbInstance.Database.Ping()
 		} else {
-			db.reConnectDB()
+			err = dbInstance.reConnectDB()
 		}
 	} else {
-		db.reConnectDB()
+		err = dbInstance.reConnectDB()
 	}
 
-	return db
+	return dbInstance, err
 }
 
-func (d *DB) CloseDB() {
-	d.Database.Close()
+func (d *DB) CloseDB() error {
+	return d.Database.Close()
 }

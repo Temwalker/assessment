@@ -2,6 +2,7 @@ package expense
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -14,15 +15,25 @@ type Handler struct {
 }
 
 func NewHandler() Handler {
-	db := database.GetDB()
-	CreateExpenseTable(db)
+	db, err := database.GetDB()
+	if err != nil {
+		log.Panic("Can't connect to DB : ", err)
+	}
+	err = CreateExpenseTable(db)
+	if err != nil {
+		log.Panic("Can't create table : ", err)
+	}
 	return Handler{
 		Storage: db,
 	}
 }
 
-func (h Handler) Close() {
-	h.Storage.CloseDB()
+func (h Handler) Close() error {
+	err := h.Storage.CloseDB()
+	if err != nil {
+		log.Println("Can't close DB Connection  : ", err)
+	}
+	return err
 }
 func getIDParam(c echo.Context) (int, bool, error) {
 	id := c.Param("id")

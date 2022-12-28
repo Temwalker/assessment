@@ -3,6 +3,7 @@ package expense
 import (
 	"bytes"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,68 @@ import (
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestCreateHandler(t *testing.T) {
+	t.Run("Create Handler Success (DB Connnection OK , Create Table OK)", func(t *testing.T) {
+		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPing().WillReturnError(nil)
+		mock.ExpectExec("CREATE TABLE IF NOT EXISTS expenses (.+)").WillReturnResult(driver.ResultNoRows)
+		d, _ := database.GetDB()
+		d.Database = db
+		assert.NotPanics(t, func() { NewHandler() })
+	})
+
+	t.Run("Create Handler but handler can not Create Table Should Panic", func(t *testing.T) {
+		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPing().WillReturnError(nil)
+		mock.ExpectExec("CREATE TABLE IF NOT EXISTS expenses (.+)").WillReturnError(sql.ErrConnDone)
+		d, _ := database.GetDB()
+		d.Database = db
+		assert.Panics(t, func() { NewHandler() })
+	})
+
+	t.Run("Create Handler but handler can not get DB connection Should Panic", func(t *testing.T) {
+		assert.Panics(t, func() { NewHandler() })
+	})
+}
+
+func TestCloseHandler(t *testing.T) {
+	t.Run("Close Handler Success", func(t *testing.T) {
+		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPing().WillReturnError(nil)
+		mock.ExpectExec("CREATE TABLE IF NOT EXISTS expenses (.+)").WillReturnResult(driver.ResultNoRows)
+		mock.ExpectClose().WillReturnError(nil)
+		d, _ := database.GetDB()
+		d.Database = db
+		h := NewHandler()
+		err = h.Close()
+		assert.NoError(t, err)
+	})
+	t.Run("Close Handler Fail", func(t *testing.T) {
+		db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		mock.ExpectPing().WillReturnError(nil)
+		mock.ExpectExec("CREATE TABLE IF NOT EXISTS expenses (.+)").WillReturnResult(driver.ResultNoRows)
+		mock.ExpectClose().WillReturnError(assert.AnError)
+		d, _ := database.GetDB()
+		d.Database = db
+		h := NewHandler()
+		err = h.Close()
+		assert.Error(t, err)
+
+	})
+}
 
 func TestCreateExpense(t *testing.T) {
 	t.Run("Create Expense Return HTTP StatusCreated and Created Expense", func(t *testing.T) {
