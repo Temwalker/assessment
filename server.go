@@ -18,12 +18,12 @@ import (
 func main() {
 	e := echo.New()
 	setMiddleware(e)
-	db := setRoute(e)
+	h := setRoute(e)
 	go startServer(e)
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 	<-shutdown
-	db.DiscDB()
+	h.Storage.DiscDB()
 	shutDownServer(e)
 }
 
@@ -42,13 +42,13 @@ func startServer(e *echo.Echo) {
 	}
 }
 
-func setRoute(e *echo.Echo) *expense.DB {
-	db := expense.GetDB()
-	e.POST("/expenses", db.CreateExpenseHandler)
-	e.GET("/expenses/:id", db.GetExpenseByIdHandler)
-	e.PUT("/expenses/:id", db.UpdateExpenseByIDHandler)
-	e.GET("/expenses", db.GetAllExpensesHandler)
-	return db
+func setRoute(e *echo.Echo) expense.Handler {
+	h := expense.NewHandler()
+	e.POST("/expenses", h.CreateExpenseHandler)
+	e.GET("/expenses/:id", h.GetExpenseByIdHandler)
+	e.PUT("/expenses/:id", h.UpdateExpenseByIDHandler)
+	e.GET("/expenses", h.GetAllExpensesHandler)
+	return h
 }
 
 func setMiddleware(e *echo.Echo) {

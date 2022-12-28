@@ -29,10 +29,10 @@ func seedExpense() (Expense, error) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	db := GetDB()
-	defer db.DiscDB()
+	h := NewHandler()
+	defer h.Storage.DiscDB()
 
-	err := db.CreateExpenseHandler(c)
+	err := h.CreateExpenseHandler(c)
 	got := Expense{}
 	if err != nil {
 		return got, err
@@ -55,10 +55,10 @@ func TestDBCreateExpense(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		db := GetDB()
-		defer db.DiscDB()
+		h := NewHandler()
+		defer h.Storage.DiscDB()
 
-		err := db.CreateExpenseHandler(c)
+		err := h.CreateExpenseHandler(c)
 		got := Expense{}
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusCreated, rec.Code)
@@ -74,10 +74,10 @@ func TestDBCreateExpense(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		db := GetDB()
-		defer db.DiscDB()
+		h := NewHandler()
+		defer h.Storage.DiscDB()
 
-		err := db.CreateExpenseHandler(c)
+		err := h.CreateExpenseHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -91,10 +91,10 @@ func TestDBCreateExpense(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		db := GetDB()
-		defer db.DiscDB()
+		h := NewHandler()
+		defer h.Storage.DiscDB()
 
-		err := db.CreateExpenseHandler(c)
+		err := h.CreateExpenseHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -114,10 +114,10 @@ func TestDBCreateExpense(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		db := GetDB()
-		db.DiscDB()
+		h := NewHandler()
+		h.Storage.DiscDB()
 
-		err := db.CreateExpenseHandler(c)
+		err := h.CreateExpenseHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		}
@@ -153,14 +153,15 @@ func TestDBGetExpenseByID(t *testing.T) {
 			c.SetParamNames("id")
 			c.SetParamValues(tt.id)
 
-			db := GetDB()
+			h := NewHandler()
+
 			if tt.wantClosedDB {
-				db.DiscDB()
+				h.Storage.DiscDB()
 			} else {
-				defer db.DiscDB()
+				defer h.Storage.DiscDB()
 			}
 
-			err = db.GetExpenseByIdHandler(c)
+			err = h.GetExpenseByIdHandler(c)
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.httpStatus, rec.Code)
 				assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
@@ -223,14 +224,15 @@ func TestDBUpdateExpenseByID(t *testing.T) {
 			c.SetParamNames("id")
 			c.SetParamValues(tt.id)
 
-			db := GetDB()
+			h := NewHandler()
+
 			if tt.wantClosedDB {
-				db.DiscDB()
+				h.Storage.DiscDB()
 			} else {
-				defer db.DiscDB()
+				defer h.Storage.DiscDB()
 			}
 
-			err = db.UpdateExpenseByIDHandler(c)
+			err = h.UpdateExpenseByIDHandler(c)
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.httpStatus, rec.Code)
 				assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
@@ -264,14 +266,15 @@ func TestDBGetAllExpenses(t *testing.T) {
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 
-			db := GetDB()
+			h := NewHandler()
+
 			if tt.wantClosedDB {
-				db.DiscDB()
+				h.Storage.DiscDB()
 			} else {
-				defer db.DiscDB()
+				defer h.Storage.DiscDB()
 			}
 
-			err := db.GetAllExpensesHandler(c)
+			err := h.GetAllExpensesHandler(c)
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.httpStatus, rec.Code)
 				if reflect.TypeOf(tt.want) == reflect.TypeOf(0) {

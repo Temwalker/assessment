@@ -45,9 +45,11 @@ func TestCreateExpense(t *testing.T) {
 		mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
 			WithArgs(want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.CreateExpenseHandler(c)
+		err = h.CreateExpenseHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusCreated, rec.Code)
@@ -66,9 +68,11 @@ func TestCreateExpense(t *testing.T) {
 		if err != nil {
 			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 		}
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.CreateExpenseHandler(c)
+		err = h.CreateExpenseHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -82,9 +86,11 @@ func TestCreateExpense(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		mdb := DB{}
+		h := Handler{
+			Storage: &DB{},
+		}
 
-		err := mdb.CreateExpenseHandler(c)
+		err := h.CreateExpenseHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -112,9 +118,11 @@ func TestCreateExpense(t *testing.T) {
 		}
 		mock.ExpectQuery("INSERT INTO expenses (.+) RETURNING id").
 			WillReturnError(sql.ErrConnDone)
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.CreateExpenseHandler(c)
+		err = h.CreateExpenseHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -151,9 +159,11 @@ func TestGetExpenseByID(t *testing.T) {
 			ExpectQuery().WithArgs(1).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "title", "amount", "note", "tags"}).AddRow(want.ID, want.Title, want.Amount, want.Note, pq.Array(&want.Tags)))
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.GetExpenseByIdHandler(c)
+		err = h.GetExpenseByIdHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -170,9 +180,11 @@ func TestGetExpenseByID(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues("NumberOne")
 
-		mdb := &DB{}
+		h := Handler{
+			Storage: &DB{},
+		}
 
-		err := mdb.GetExpenseByIdHandler(c)
+		err := h.GetExpenseByIdHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -196,9 +208,11 @@ func TestGetExpenseByID(t *testing.T) {
 		mock.ExpectPrepare("SELECT id,title,amount,note,tags FROM expenses").
 			ExpectQuery().WithArgs(1).WillReturnError(sql.ErrNoRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.GetExpenseByIdHandler(c)
+		err = h.GetExpenseByIdHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -221,9 +235,11 @@ func TestGetExpenseByID(t *testing.T) {
 		}
 		mock.ExpectPrepare("SELECT id,title,amount,note,tags FROM expenses").WillReturnError(sql.ErrConnDone)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.GetExpenseByIdHandler(c)
+		err = h.GetExpenseByIdHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -267,9 +283,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 			ExpectQuery().WithArgs(want.ID, want.Title, want.Amount, want.Note, pq.Array(&want.Tags)).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(want.ID))
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.UpdateExpenseByIDHandler(c)
+		err = h.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -293,9 +311,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues("NumberOne")
 
-		mdb := &DB{}
+		h := Handler{
+			Storage: &DB{},
+		}
 
-		err := mdb.UpdateExpenseByIDHandler(c)
+		err := h.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -343,9 +363,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 			c.SetParamNames("id")
 			c.SetParamValues("1")
 
-			mdb := DB{}
+			h := Handler{
+				Storage: &DB{},
+			}
 
-			err := mdb.UpdateExpenseByIDHandler(c)
+			err := h.UpdateExpenseByIDHandler(c)
 
 			if assert.NoError(t, err) {
 				assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -380,9 +402,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 			ExpectQuery().WithArgs(1, "apple smoothie", 89.00, "no discount", pq.Array(&[]string{"beverage"})).
 			WillReturnError(sql.ErrNoRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.UpdateExpenseByIDHandler(c)
+		err = h.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -414,9 +438,11 @@ func TestUpdateExpenseByID(t *testing.T) {
 		}
 		mock.ExpectPrepare("UPDATE expenses").WillReturnError(sql.ErrConnDone)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.UpdateExpenseByIDHandler(c)
+		err = h.UpdateExpenseByIDHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -445,9 +471,11 @@ func TestGetAllExpenses(t *testing.T) {
 			ExpectQuery().
 			WillReturnRows(mockReturnRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -471,9 +499,11 @@ func TestGetAllExpenses(t *testing.T) {
 			ExpectQuery().
 			WillReturnRows(mockReturnRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusOK, rec.Code)
 			respEx := []Expense{}
@@ -498,9 +528,11 @@ func TestGetAllExpenses(t *testing.T) {
 			ExpectQuery().
 			WillReturnRows(mockReturnRows)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
@@ -520,9 +552,11 @@ func TestGetAllExpenses(t *testing.T) {
 		mock.ExpectPrepare("SELECT (.+) FROM expenses").ExpectQuery().
 			WillReturnError(sql.ErrConnDone)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))
@@ -541,9 +575,11 @@ func TestGetAllExpenses(t *testing.T) {
 		}
 		mock.ExpectPrepare("SELECT (.+) FROM expenses").WillReturnError(sql.ErrConnDone)
 
-		mdb := DB{db}
+		h := Handler{
+			Storage: &DB{db},
+		}
 
-		err = mdb.GetAllExpensesHandler(c)
+		err = h.GetAllExpensesHandler(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
 			assert.Equal(t, string(expected), strings.TrimSpace(rec.Body.String()))

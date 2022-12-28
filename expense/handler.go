@@ -8,6 +8,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type Handler struct {
+	Storage *DB
+}
+
+func NewHandler() Handler {
+	db := initDB()
+	return Handler{
+		Storage: db,
+	}
+}
+
 func getIDParam(c echo.Context) (int, bool, error) {
 	id := c.Param("id")
 	intVar, err := strconv.Atoi(id)
@@ -49,27 +60,27 @@ func returnExpensesList(err error, c echo.Context, expenses []Expense) error {
 	return c.JSON(http.StatusOK, expenses)
 }
 
-func (d *DB) CreateExpenseHandler(c echo.Context) error {
+func (h *Handler) CreateExpenseHandler(c echo.Context) error {
 	ex := Expense{}
 	ifErr, respErr := bindRequestBody(c, &ex)
 	if ifErr {
 		return respErr
 	}
-	err := d.InsertExpense(&ex)
+	err := h.Storage.InsertExpense(&ex)
 	return returnExpenseCreated(err, c, ex)
 }
 
-func (d *DB) GetExpenseByIdHandler(c echo.Context) error {
+func (h *Handler) GetExpenseByIdHandler(c echo.Context) error {
 	intVar, ifErr, respErr := getIDParam(c)
 	if ifErr {
 		return respErr
 	}
 	ex := Expense{}
-	err := d.SelectExpenseByID(intVar, &ex)
+	err := h.Storage.SelectExpenseByID(intVar, &ex)
 	return returnExpenseByID(err, c, ex)
 }
 
-func (d *DB) UpdateExpenseByIDHandler(c echo.Context) error {
+func (h *Handler) UpdateExpenseByIDHandler(c echo.Context) error {
 	intVar, ifErr, respErr := getIDParam(c)
 	if ifErr {
 		return respErr
@@ -79,12 +90,12 @@ func (d *DB) UpdateExpenseByIDHandler(c echo.Context) error {
 	if ifErr {
 		return respErr
 	}
-	err := d.UpdateExpenseByID(intVar, &ex)
+	err := h.Storage.UpdateExpenseByID(intVar, &ex)
 	return returnExpenseByID(err, c, ex)
 }
 
-func (d *DB) GetAllExpensesHandler(c echo.Context) error {
+func (h *Handler) GetAllExpensesHandler(c echo.Context) error {
 	expenses := []Expense{}
-	err := d.SelectAllExpenses(&expenses)
+	err := h.Storage.SelectAllExpenses(&expenses)
 	return returnExpensesList(err, c, expenses)
 }
